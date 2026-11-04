@@ -1,0 +1,122 @@
+{
+  "generatedAt": "2026-11-11T00:00:00Z",
+  "generatedOnPlatform": "win32",
+  "projectType": "webapp",
+  "devServer": {
+    "command": "php",
+    "args": [
+      "artisan",
+      "serve",
+      "--host=127.0.0.1",
+      "--port=8010"
+    ],
+    "url": "http://127.0.0.1:8010/login",
+    "readyTimeoutSeconds": 120
+  },
+  "setup": [
+    {
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "timeoutSeconds": 600
+    },
+    {
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "cwd": "mobile",
+      "timeoutSeconds": 600
+    }
+  ],
+  "assertions": [
+    {
+      "name": "tests-pass",
+      "kind": "process",
+      "command": "npm",
+      "args": [
+        "test"
+      ],
+      "verificationMethod": "test-results",
+      "expected": "0",
+      "timeoutSeconds": 300
+    },
+    {
+      "name": "laravel-assets-build",
+      "kind": "process",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "verificationMethod": "exit-code",
+      "expected": "0",
+      "timeoutSeconds": 180
+    },
+    {
+      "name": "expo-typecheck",
+      "kind": "process",
+      "command": "npx",
+      "args": [
+        "tsc",
+        "--noEmit"
+      ],
+      "cwd": "mobile",
+      "verificationMethod": "exit-code",
+      "expected": "0",
+      "timeoutSeconds": 180
+    },
+    {
+      "name": "expo-web-export",
+      "kind": "process",
+      "command": "npx",
+      "args": [
+        "expo",
+        "export",
+        "--platform",
+        "web",
+        "--output-dir",
+        ".tsupgrader/runtime-validation/expo-web"
+      ],
+      "cwd": "mobile",
+      "verificationMethod": "exit-code",
+      "expected": "0",
+      "timeoutSeconds": 240
+    },
+    {
+      "name": "listings-api-responds",
+      "kind": "process",
+      "command": "node",
+      "args": [
+        "--input-type=module",
+        "-e",
+        "const response = await fetch('http://127.0.0.1:8010/api/listings?mode=sale'); if (response.status !== 401) process.exit(1);"
+      ],
+      "verificationMethod": "exit-code",
+      "expected": "0",
+      "timeoutSeconds": 30
+    },
+    {
+      "name": "expo-web-serves",
+      "kind": "http-probe",
+      "startCommand": "npx",
+      "startArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8082"
+      ],
+      "cwd": "mobile",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://127.0.0.1:8010/api",
+        "CI": "1"
+      },
+      "url": "http://127.0.0.1:8082/account",
+      "verificationMethod": "http-status",
+      "expected": "200",
+      "timeoutSeconds": 180
+    }
+  ]
+}
