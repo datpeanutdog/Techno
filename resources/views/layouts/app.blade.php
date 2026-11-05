@@ -40,11 +40,18 @@
                 </a>
                 @auth
                     <div class="account-nav">
+                        <a href="{{ route('conversations.index') }}" @if (request()->routeIs('conversations.*')) aria-current="page" @endif>Messages</a>
                         <a href="{{ route('profile.edit') }}">{{ auth()->user()->name }}</a>
                         <a href="{{ route('my-listings') }}">My listings</a>
                         <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Log out</button></form>
                     </div>
                 @endauth
+                @guest
+                    <div class="account-nav">
+                        <a href="{{ route('login') }}">Log in</a>
+                        <a class="account-register" href="{{ route('register') }}">Join PASABUY</a>
+                    </div>
+                @endguest
             @endunless
         </div>
     </header>

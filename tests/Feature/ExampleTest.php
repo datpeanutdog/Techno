@@ -14,7 +14,6 @@ class ExampleTest extends TestCase
      */
     public function test_the_application_returns_a_successful_response(): void
     {
-        $this->get('/')->assertRedirect(route('login'));
-        $this->get(route('login'))->assertOk()->assertSee('Welcome back');
+        $this->get('/')->assertOk()->assertSee('What do you need for school?');
     }
 }

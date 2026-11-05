@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Conversation;
 use App\Models\Listing;
 use App\Support\ListingCategories;
 use App\Support\ListingData;
@@ -61,7 +62,22 @@ class MarketplaceController extends Controller
     {
         abort_unless($listing->is_available && in_array($listing->category, ListingCategories::ALL, true), 404);
 
-        return view('marketplace.show', compact('listing'));
+        $conversation = null;
+        if (auth()->check() && $listing->user_id && $listing->user_id !== auth()->id()) {
+            $conversation = Conversation::query()
+                ->where('listing_id', $listing->id)
+                ->where('buyer_id', auth()->id())
+                ->first();
+        }
+
+        return view('marketplace.show', compact('listing', 'conversation'));
+    }
+
+    public function messageSeller(Listing $listing): RedirectResponse
+    {
+        Gate::authorize('message', $listing);
+
+        return redirect()->to(route('listings.show', $listing).'#contact');
     }
 
     public function create(): View

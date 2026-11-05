@@ -36,7 +36,7 @@ class AccountTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'jamie@example.test']);
 
-        $this->get('/')->assertRedirect(route('login'));
+        $this->get('/')->assertOk()->assertSee('What do you need for school?');
         $this->post('/login', [
             'email' => $user->email,
             'password' => 'password',

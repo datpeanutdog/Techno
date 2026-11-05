@@ -31,7 +31,7 @@ class AccountController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('marketplace.index');
+        return redirect()->intended(route('marketplace.index'));
     }
 
     public function loginForm(): View

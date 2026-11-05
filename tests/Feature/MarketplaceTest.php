@@ -18,14 +18,19 @@ class MarketplaceTest extends TestCase
         $response = $this->actingAs(User::factory()->create())->get('/');
 
         $response->assertOk()
-            ->assertSee('School days,')
+            ->assertDontSee('School days,')
+            ->assertSee('What do you need for school?')
+            ->assertSee('Campus or neighborhood')
+            ->assertSee('Search')
             ->assertSee('Engineering calculus book set')
             ->assertSee('Laptop for classes & projects')
             ->assertDontSee('Student lab coat')
             ->assertSee('<nav class="market-tabs" aria-label="Browse sale and rental listings">', false)
-            ->assertSee('class="tab-active"', false)
+            ->assertSee('market-mode-tab tab-active', false)
             ->assertSee('aria-current="page"', false)
-            ->assertSee('For sale')
+            ->assertSee('>Buy<', false)
+            ->assertSee('Find something to keep')
+            ->assertSee('Borrow it for a while')
             ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Buy</a>'], false);
     }
 
@@ -55,8 +60,8 @@ class MarketplaceTest extends TestCase
         $this->actingAs(User::factory()->create())->get('/?mode=rent')
             ->assertOk()
             ->assertSee('Scientific calculator for exams')
-            ->assertSee('class="tab-active"', false)
-            ->assertSee('For rent')
+            ->assertSee('market-mode-tab tab-active', false)
+            ->assertSee('>Rent<', false)
             ->assertDontSee('Engineering calculus book set');
     }
 
@@ -160,14 +165,65 @@ class MarketplaceTest extends TestCase
         $this->post(route('listings.store'), [])->assertRedirect(route('login'));
     }
 
-    public function test_marketplace_is_the_first_page_after_login_and_not_accessible_to_guests(): void
+    public function test_public_marketplace_is_the_first_page_after_login(): void
     {
+        $this->seed();
         $user = User::factory()->create();
 
-        $this->get('/')->assertRedirect(route('login'));
-        $this->get('/?mode=rent')->assertRedirect(route('login'));
-        $this->actingAs($user)->get('/')->assertOk()->assertSee('School days,');
+        $this->get('/')->assertOk()
+            ->assertSee('What do you need for school?')
+            ->assertSee('Join PASABUY');
+        $this->get('/?mode=rent')->assertOk()->assertSee('Scientific calculator for exams');
+        $this->actingAs($user)->get('/')->assertOk()->assertSee('What do you need for school?');
         $this->post('/logout')->assertRedirect(route('marketplace.index'));
+    }
+
+    public function test_visitors_can_view_listing_details_but_must_sign_in_to_contact_the_seller(): void
+    {
+        $seller = User::factory()->create();
+        $listing = $seller->listings()->create([
+            'title' => 'Used biology textbook',
+            'description' => 'A helpful class reference.',
+            'price' => 250,
+            'type' => 'sale',
+            'category' => 'Books & Notes',
+            'location' => 'Main campus',
+            'seller_name' => $seller->name,
+            'seller_initials' => 'ST',
+        ]);
+
+        $this->get(route('listings.show', $listing))
+            ->assertOk()
+            ->assertSee('Log in to message the seller');
+
+        $this->get(route('listings.messages.create', $listing))->assertRedirect(route('login'));
+    }
+
+    public function test_signing_in_from_a_listing_message_prompt_returns_to_the_contact_form(): void
+    {
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create();
+        $listing = $seller->listings()->create([
+            'title' => 'Used biology textbook',
+            'description' => 'A helpful class reference.',
+            'price' => 250,
+            'type' => 'sale',
+            'category' => 'Books & Notes',
+            'location' => 'Main campus',
+            'seller_name' => $seller->name,
+            'seller_initials' => 'ST',
+        ]);
+
+        $this->get(route('listings.messages.create', $listing))->assertRedirect(route('login'));
+        $this->post(route('login'), [
+            'email' => $buyer->email,
+            'password' => 'password',
+        ])->assertRedirect(route('listings.messages.create', $listing));
+
+        $this->get(route('listings.messages.create', $listing))
+            ->assertRedirect(route('listings.show', $listing).'#contact');
+
+        $this->get(route('listings.show', $listing))->assertOk()->assertSee('id="contact"', false);
     }
 
     public function test_login_and_registration_panels_only_show_the_brand_header(): void

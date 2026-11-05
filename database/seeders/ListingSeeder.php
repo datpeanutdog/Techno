@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Listing;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class ListingSeeder extends Seeder
 {
@@ -164,7 +166,17 @@ class ListingSeeder extends Seeder
         ];
 
         foreach ($listings as $listing) {
-            Listing::updateOrCreate(['slug' => $listing['slug']], $listing);
+            $seller = User::firstOrCreate(
+                ['email' => 'seller+'.Str::slug($listing['slug']).'@example.test'],
+                [
+                    'name' => $listing['seller_name'],
+                    'password' => Str::random(64),
+                ],
+            );
+
+            $seededListing = Listing::updateOrCreate(['slug' => $listing['slug']], $listing);
+            $seededListing->user()->associate($seller);
+            $seededListing->save();
         }
     }
 }

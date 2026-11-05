@@ -16,4 +16,11 @@ class ListingPolicy
     {
         return $listing->user_id === $user->id;
     }
+
+    public function message(User $user, Listing $listing): bool
+    {
+        return $listing->is_available
+            && $listing->user_id !== null
+            && $listing->user_id !== $user->id;
+    }
 }

@@ -36,6 +36,25 @@
                         <a class="button button-navy" href="{{ route('my-listings.edit', $listing) }}">Edit listing</a>
                         <a class="button button-danger" href="{{ route('my-listings') }}">Manage my listings</a>
                     </div>
+                @elseif ($listing->user_id)
+                    @auth
+                        @if ($conversation)
+                            <a class="button button-navy message-seller-button" href="{{ route('conversations.show', $conversation) }}">Continue your private conversation <span aria-hidden="true">→</span></a>
+                        @else
+                            <form class="message-start-form" id="contact" method="POST" action="{{ route('listings.messages.store', $listing) }}">
+                                @csrf
+                                <span class="message-listing-context">Discussing: <strong>{{ $listing->title }}</strong> · ₱{{ number_format((float) $listing->price) }}@if ($listing->type === 'rent') / {{ $listing->rent_period }}@endif</span>
+                                <label class="form-label" for="first-message">Message {{ $listing->user->name }} privately</label>
+                                @if ($errors->has('body'))
+                                    <p class="message-error" role="alert">{{ $errors->first('body') }}</p>
+                                @endif
+                                <textarea class="form-control" id="first-message" name="body" maxlength="2000" placeholder="Ask a question, make an offer, or arrange a time to meet..." required>{{ old('body') }}</textarea>
+                                <button class="button button-navy message-seller-button" type="submit">Send an offer or message <span aria-hidden="true">→</span></button>
+                            </form>
+                        @endif
+                    @else
+                        <a class="button button-navy message-seller-button" href="{{ route('listings.messages.create', $listing) }}">Log in to message the seller <span aria-hidden="true">→</span></a>
+                    @endauth
                 @endif
                 <div class="detail-safety">
                     <span aria-hidden="true">✳</span>

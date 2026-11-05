@@ -3,36 +3,6 @@
 @section('title', 'PASABUY — your campus marketplace')
 
 @section('content')
-    <section class="hero">
-        <div class="hero-copy">
-            <p class="eyebrow"><span class="eyebrow-spark">✳</span> Your campus, all in one place</p>
-            <h1>School days,<br><span>made a little easier.</span></h1>
-            <p class="hero-description">Find pre-loved textbooks, rent a calculator for exam week, or pass your uniform on to another student. Good finds make campus life better.</p>
-            <div class="hero-actions">
-                <a class="button button-navy" href="#discover">Find your next school-day save <span aria-hidden="true">↘</span></a>
-                <a class="hero-text-link" href="{{ route('listings.create') }}">Done with something? <span>Pass it on →</span></a>
-            </div>
-            <div class="community-proof">
-                <div class="avatar-stack" aria-hidden="true">
-                    <span class="avatar avatar-peach">M</span><span class="avatar avatar-blue">P</span><span class="avatar avatar-yellow">L</span>
-                </div>
-                <span><strong>Student to student.</strong><br>Good stuff stays in the community.</span>
-            </div>
-        </div>
-        <div class="hero-art" aria-label="School books and supplies shared by students">
-            <div class="hero-sun"></div>
-            <div class="hero-sticker sticker-top"><span>✦</span> pass it on,<br>not to landfill</div>
-            <div class="hero-object">
-                <div class="object-top"></div>
-                <div class="object-label"><span>GOOD LUCK<br>THIS SEMESTER</span><span class="object-spark">✳</span></div>
-                <div class="object-bottom"><span>your next chapter<br>starts here</span><span>PB / 01</span></div>
-            </div>
-            <div class="hero-chip chip-left"><span class="chip-icon chip-green">↗</span> rent for exam week</div>
-            <div class="hero-chip chip-right"><span class="chip-icon chip-yellow">♡</span> find your next read</div>
-            <div class="hero-sticker sticker-bottom">student finds<br>for student life <span>☺</span></div>
-        </div>
-    </section>
-
     <section class="search-wrap" aria-label="Find a school listing">
         <form class="search-form" method="GET" action="{{ route('marketplace.index') }}">
             @if (request('mode')) <input type="hidden" name="mode" value="{{ request('mode') }}"> @endif
@@ -107,9 +77,15 @@
         </div>
 
         <nav class="market-tabs" aria-label="Browse sale and rental listings">
-            <a class="{{ request('mode') !== 'rent' ? 'tab-active' : '' }}" href="{{ route('marketplace.index', array_filter(['category' => request('category'), 'q' => request('q'), 'location' => request('location')])) }}#discover" @if (request('mode') !== 'rent') aria-current="page" @endif>For sale</a>
-            <a class="{{ request('mode') === 'rent' ? 'tab-active' : '' }}" href="{{ route('marketplace.index', array_filter(['mode' => 'rent', 'category' => request('category'), 'q' => request('q'), 'location' => request('location')])) }}#discover" @if (request('mode') === 'rent') aria-current="page" @endif>For rent</a>
-            <a href="{{ route('listings.create') }}">Sell or rent an item <span aria-hidden="true">＋</span></a>
+            <a class="market-mode-tab {{ request('mode') !== 'rent' ? 'tab-active' : '' }}" href="{{ route('marketplace.index', array_filter(['category' => request('category'), 'q' => request('q'), 'location' => request('location')])) }}#discover" @if (request('mode') !== 'rent') aria-current="page" @endif>
+                <span class="market-mode-icon" aria-hidden="true">↗</span>
+                <span class="market-mode-copy"><strong>Buy</strong><small>Find something to keep</small></span>
+            </a>
+            <a class="market-mode-tab {{ request('mode') === 'rent' ? 'tab-active' : '' }}" href="{{ route('marketplace.index', array_filter(['mode' => 'rent', 'category' => request('category'), 'q' => request('q'), 'location' => request('location')])) }}#discover" @if (request('mode') === 'rent') aria-current="page" @endif>
+                <span class="market-mode-icon market-mode-icon-rent" aria-hidden="true">↻</span>
+                <span class="market-mode-copy"><strong>Rent</strong><small>Borrow it for a while</small></span>
+            </a>
+            <a class="market-sell-link" href="{{ route('listings.create') }}">List an item <span aria-hidden="true">＋</span></a>
         </nav>
 
         @if (request()->hasAny(['q', 'location', 'mode', 'category']))
