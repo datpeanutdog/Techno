@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\ListingController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,12 @@ Route::post('/auth/reset-password', [AccountController::class, 'resetPassword'])
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/listings', [ListingController::class, 'index']);
     Route::get('/listings/{slug}', [ListingController::class, 'show']);
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
+    Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'storeMessage'])
+        ->middleware('throttle:30,1');
+    Route::post('/listings/{listing:slug}/messages', [ConversationController::class, 'start'])
+        ->middleware('throttle:20,1');
     Route::get('/auth/me', [AccountController::class, 'me']);
     Route::post('/auth/logout', [AccountController::class, 'logout']);
     Route::put('/auth/profile', [AccountController::class, 'updateProfile']);

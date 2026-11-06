@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { COLORS, CATEGORY_ICONS, ChoiceChip, Label, styles } from '../App';
 import { getAuthToken, Listing, ListingType, requestJson } from '../src/lib/api';
+import { MenuButton } from '../src/components/NavigationDrawer';
 
 const categories = Object.keys(CATEGORY_ICONS);
 
@@ -112,7 +113,7 @@ export default function SellScreen() {
           <Text style={styles.backButtonText}>‹  Back</Text>
         </Pressable>
         <Text style={styles.headerRouteTitle}>{editId ? 'Edit listing' : 'New listing'}</Text>
-        <View style={styles.routeHeaderSpacer} />
+        <MenuButton />
       </View>
 
       <KeyboardAvoidingView

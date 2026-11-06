@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
@@ -24,6 +24,7 @@ import {
   requestJson,
   UserProfile,
 } from './src/lib/api';
+import { MenuButton } from './src/components/NavigationDrawer';
 
 type Tab = 'buy' | 'rent' | 'saved';
 
@@ -166,6 +167,16 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    if (routerView === 'saved') {
+      setTab('saved');
+    } else if (routerMode === 'rent') {
+      setTab('rent');
+    } else if (routerMode === 'sale' || routerMode === 'buy') {
+      setTab('buy');
+    }
+  }, [routerMode, routerView]);
 
   useFocusEffect(
     useCallback(() => {
@@ -450,20 +461,7 @@ export default function App() {
           </View>
         </Pressable>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pressable
-            accessibilityLabel="Open your messages"
-            onPress={() => router.push('/messages')}
-            style={[styles.headerAddButton, { backgroundColor: COLORS.paleBlue }]}
-          >
-            <Text style={[styles.headerAddText, { color: COLORS.navy, fontSize: 17 }]}>✉</Text>
-          </Pressable>
-          <Pressable
-            accessibilityLabel="Open your account"
-            onPress={() => router.push('/account')}
-            style={[styles.headerAddButton, { backgroundColor: COLORS.navy }]}
-          >
-            <Text style={[styles.headerAddText, { color: COLORS.white, fontSize: 17 }]}>☺</Text>
-          </Pressable>
+          <MenuButton />
           <Pressable
             accessibilityLabel="List a school item"
             onPress={() => router.push('/sell')}

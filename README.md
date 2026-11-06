@@ -55,7 +55,8 @@ Run `php artisan storage:link` once so uploaded profile photos are publicly avai
 - Customize the public profile with a display name, campus, short bio, and uploaded photo or secure photo URL.
 - Post new sale or rental listings after signing in. Rental posts include a day, week, or month price period.
 - View, update, and remove your own listings on either platform.
+- Message a listing's seller privately and continue the conversation from your inbox on either platform.
 - Save favorite finds in the current browser with the heart button.
 - Seeded example listings to explore the marketplace right away.
 
-Seller ratings and the seeded campus listings are sample content. Payments and buyer/seller messaging are not included.
+Seller ratings and the seeded campus listings are sample content. Payments are not included.

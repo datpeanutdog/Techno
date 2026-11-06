@@ -21,6 +21,7 @@ import {
   Listing,
   requestJson,
 } from '../../src/lib/api';
+import { MenuButton } from '../../src/components/NavigationDrawer';
 
 export default function NewMessageScreen() {
   const { listingSlug: rawListingSlug } = useLocalSearchParams<{ listingSlug?: string }>();
@@ -36,7 +37,10 @@ export default function NewMessageScreen() {
 
     void (async () => {
       if (!await getAuthToken()) {
-        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        router.replace({
+          pathname: '/account',
+          params: { returnTo: 'message', listingSlug: listingSlug ?? '' },
+        });
         return;
       }
       if (!listingSlug) {
@@ -54,7 +58,10 @@ export default function NewMessageScreen() {
         const detail = issue instanceof Error ? issue.message : 'This listing could not be opened.';
         if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
           await clearAuthToken();
-          router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+          router.replace({
+            pathname: '/account',
+            params: { returnTo: 'message', listingSlug },
+          });
           return;
         }
         if (active) setError(detail);
@@ -86,7 +93,16 @@ export default function NewMessageScreen() {
         params: { id: String(result.data.id) },
       });
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'Your message could not be sent.');
+      const detail = issue instanceof Error ? issue.message : 'Your message could not be sent.';
+      if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
+        await clearAuthToken();
+        router.replace({
+          pathname: '/account',
+          params: { returnTo: 'message', listingSlug },
+        });
+        return;
+      }
+      setError(detail);
     } finally {
       setSending(false);
     }
@@ -105,7 +121,7 @@ export default function NewMessageScreen() {
             <Text style={appStyles.backButtonText}>‹  Back</Text>
           </Pressable>
           <Text style={appStyles.headerRouteTitle}>Message seller</Text>
-          <View style={appStyles.routeHeaderSpacer} />
+          <MenuButton />
         </View>
 
         {loading ? (

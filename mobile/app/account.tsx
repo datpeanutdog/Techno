@@ -23,11 +23,12 @@ import {
   saveAuthToken,
   UserProfile,
 } from '../src/lib/api';
+import { MenuButton } from '../src/components/NavigationDrawer';
 
 type AccountMode = 'login' | 'register' | 'forgot';
 
 export default function AccountScreen() {
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const { returnTo, listingSlug } = useLocalSearchParams<{ returnTo?: string; listingSlug?: string }>();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [mode, setMode] = useState<AccountMode>('login');
@@ -118,6 +119,8 @@ export default function AccountScreen() {
         router.replace('/sell');
       } else if (returnTo === 'messages') {
         router.replace('/messages');
+      } else if (returnTo === 'message' && typeof listingSlug === 'string') {
+        router.replace({ pathname: '/messages/new', params: { listingSlug } });
       } else {
         router.replace('/');
       }
@@ -248,18 +251,21 @@ export default function AccountScreen() {
                 <Text style={styles.backButtonText}>‹  Back</Text>
               </Pressable>
               <Text style={styles.headerRouteTitle}>Your account</Text>
-              <View style={styles.routeHeaderSpacer} />
+              <MenuButton />
             </>
           ) : (
-            <View style={styles.brand}>
-              <View style={styles.brandIcon}>
-                <Text style={styles.brandIconText}>✓</Text>
+            <>
+              <View style={styles.brand}>
+                <View style={styles.brandIcon}>
+                  <Text style={styles.brandIconText}>✓</Text>
+                </View>
+                <View>
+                  <Text style={styles.brandName}>pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
+                  <Text style={styles.brandCaption}>YOUR CAMPUS MARKETPLACE</Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.brandName}>pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
-                <Text style={styles.brandCaption}>YOUR CAMPUS MARKETPLACE</Text>
-              </View>
-            </View>
+              <MenuButton />
+            </>
           )}
         </View>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.contentArea}>

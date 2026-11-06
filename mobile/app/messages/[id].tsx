@@ -24,6 +24,7 @@ import {
   getAuthToken,
   requestJson,
 } from '../../src/lib/api';
+import { MenuButton } from '../../src/components/NavigationDrawer';
 
 function formatMessageDate(value: string): string {
   const date = new Date(value);
@@ -119,7 +120,7 @@ export default function ConversationScreen() {
           <Text numberOfLines={1} style={appStyles.headerRouteTitle}>
             {conversation?.other_participant.name ?? 'Conversation'}
           </Text>
-          <View style={appStyles.routeHeaderSpacer} />
+          <MenuButton />
         </View>
 
         {loading ? (

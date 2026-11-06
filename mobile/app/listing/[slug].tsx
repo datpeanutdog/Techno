@@ -21,6 +21,7 @@ import {
   requestJson,
   UserProfile,
 } from '../../src/lib/api';
+import { MenuButton } from '../../src/components/NavigationDrawer';
 
 export default function ListingDetailScreen() {
   const params = useLocalSearchParams<{ slug: string }>();
@@ -97,7 +98,7 @@ export default function ListingDetailScreen() {
           <Text style={styles.backButtonText}>‹  Back</Text>
         </Pressable>
         <Text style={styles.headerRouteTitle}>Listing details</Text>
-        <View style={styles.routeHeaderSpacer} />
+        <MenuButton />
       </View>
 
       {loading ? (

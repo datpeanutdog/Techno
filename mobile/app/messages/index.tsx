@@ -19,6 +19,7 @@ import {
   getAuthToken,
   requestJson,
 } from '../../src/lib/api';
+import { MenuButton } from '../../src/components/NavigationDrawer';
 
 function formatMessageTime(value: string | undefined): string {
   if (!value) return '';
@@ -79,7 +80,7 @@ export default function MessagesScreen() {
             <Text style={appStyles.backButtonText}>‹  Back</Text>
           </Pressable>
           <Text style={appStyles.headerRouteTitle}>Your messages</Text>
-          <View style={appStyles.routeHeaderSpacer} />
+          <MenuButton />
         </View>
 
         {loading ? (
