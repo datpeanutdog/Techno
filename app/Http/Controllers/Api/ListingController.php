@@ -96,7 +96,7 @@ class ListingController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $listing = $request->user()->listings()->findOrFail($id);
-        $listing->update(ListingData::validated($request, $request->user()));
+        $listing->update(ListingData::validated($request, $request->user(), $listing));
 
         return response()->json(['data' => $listing->refresh()]);
     }

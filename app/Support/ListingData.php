@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use App\Models\Listing;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ListingData
@@ -11,7 +13,7 @@ class ListingData
     /**
      * @return array<string, mixed>
      */
-    public static function validated(Request $request, User $user): array
+    public static function validated(Request $request, User $user, ?Listing $listing = null): array
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:90'],
@@ -22,8 +24,22 @@ class ListingData
             'category' => ['required', 'in:'.implode(',', ListingCategories::ALL)],
             'location' => ['required', 'string', 'max:100'],
             'image_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\//i'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_image' => ['nullable', 'boolean'],
             'condition' => ['nullable', 'in:Brand new,Like new,Good,Fair'],
         ]);
+
+        unset($data['image'], $data['remove_image']);
+
+        if ($request->hasFile('image')) {
+            if ($listing?->image_path) {
+                Storage::disk('public')->delete($listing->image_path);
+            }
+            $data['image_path'] = $request->file('image')->store('listings', 'public');
+        } elseif ($request->boolean('remove_image') && $listing?->image_path) {
+            Storage::disk('public')->delete($listing->image_path);
+            $data['image_path'] = null;
+        }
 
         $data['seller_name'] = $user->name;
         $data['seller_initials'] = collect(explode(' ', $user->name))

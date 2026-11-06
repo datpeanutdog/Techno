@@ -14,7 +14,7 @@
                 <div class="create-doodle" aria-hidden="true">✳</div>
             </section>
 
-            <form class="listing-form" method="POST" action="{{ isset($listing) ? route('my-listings.update', $listing) : route('listings.store') }}">
+            <form class="listing-form" method="POST" enctype="multipart/form-data" action="{{ isset($listing) ? route('my-listings.update', $listing) : route('listings.store') }}">
                 @csrf
                 @if (isset($listing)) @method('PUT') @endif
                 <div class="form-heading">
@@ -84,9 +84,17 @@
                 <input class="form-control" id="location" name="location" value="{{ old('location', $listing->location ?? '') }}" maxlength="100" placeholder="For example, main campus or campus library" required>
                 <p class="form-help">Posted by {{ auth()->user()->name }} from your PASABUY account.</p>
 
-                <label class="form-label" for="image_url">A photo link <span class="optional-label">optional</span></label>
-                <input class="form-control" id="image_url" name="image_url" type="url" value="{{ old('image_url', $listing->image_url ?? '') }}" maxlength="2048" placeholder="https://...">
-                <p class="form-help">Add a link to a photo that starts with https://.</p>
+                <label class="form-label" for="image">Upload a photo <span class="optional-label">optional</span></label>
+                <input class="form-control" id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp">
+                <p class="form-help">JPG, PNG, or WebP, up to 2 MB.</p>
+
+                @if (isset($listing) && $listing->image_path)
+                    <label class="form-help"><input type="checkbox" name="remove_image" value="1"> Remove the current uploaded photo</label>
+                @endif
+
+                <label class="form-label" for="image_url">Or a photo link <span class="optional-label">optional</span></label>
+                <input class="form-control" id="image_url" name="image_url" type="url" value="{{ old('image_url', isset($listing) ? $listing->getRawOriginal('image_url') : '') }}" maxlength="2048" placeholder="https://...">
+                <p class="form-help">If you upload a photo, it is used instead of the link.</p>
 
                 <button class="button button-navy form-submit" type="submit">{{ isset($listing) ? 'Save listing changes' : 'Post campus listing' }} <span aria-hidden="true">→</span></button>
                 <p class="form-fine-print">Post school-related listings and arrange a safe campus handoff.</p>
