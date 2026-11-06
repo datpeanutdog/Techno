@@ -114,7 +114,7 @@ class MarketplaceController extends Controller
     public function update(Request $request, Listing $listing): RedirectResponse
     {
         Gate::authorize('update', $listing);
-        $listing->update(ListingData::validated($request, $request->user()));
+        $listing->update(ListingData::validated($request, $request->user(), $listing));
 
         return redirect()->route('listings.show', $listing)->with('status', 'Your listing has been updated.');
     }

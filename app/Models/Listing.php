@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Listing extends Model
@@ -21,6 +22,7 @@ class Listing extends Model
         'category',
         'location',
         'image_url',
+        'image_path',
         'seller_name',
         'seller_initials',
         'seller_rating',
@@ -44,6 +46,18 @@ class Listing extends Model
         return 'slug';
     }
 
+    /**
+     * An uploaded photo wins; otherwise fall back to the pasted link.
+     */
+    public function getImageUrlAttribute(?string $value): ?string
+    {
+        if ($this->image_path) {
+            return request()->getSchemeAndHttpHost().'/storage/'.ltrim($this->image_path, '/');
+        }
+
+        return $value;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -58,6 +72,12 @@ class Listing extends Model
     {
         static::creating(function (Listing $listing): void {
             $listing->slug ??= Str::slug($listing->title).'-'.Str::lower(Str::random(6));
+        });
+
+        static::deleting(function (Listing $listing): void {
+            if ($listing->image_path) {
+                Storage::disk('public')->delete($listing->image_path);
+            }
         });
     }
 }

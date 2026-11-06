@@ -102,7 +102,7 @@
                         <div class="listing-image-wrap">
                             <a class="listing-image-link" href="{{ route('listings.show', $listing) }}" aria-label="View {{ $listing->title }}">
                                 @if ($listing->image_url)
-                                    <img class="listing-image" src="{{ $listing->image_url }}" alt="{{ $listing->title }}" loading="lazy">
+                                    <img class="listing-image" src="{{ $listing->image_url }}" alt="{{ $listing->title }}" loading="lazy" referrerpolicy="no-referrer">
                                 @else
                                     <div class="listing-image listing-placeholder" aria-hidden="true">✦</div>
                                 @endif

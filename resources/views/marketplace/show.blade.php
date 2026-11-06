@@ -8,7 +8,7 @@
         <div class="detail-layout">
             <div class="detail-image-wrap">
                 @if ($listing->image_url)
-                    <img class="detail-image" src="{{ $listing->image_url }}" alt="{{ $listing->title }}">
+                    <img class="detail-image" src="{{ $listing->image_url }}" alt="{{ $listing->title }}" referrerpolicy="no-referrer">
                 @else
                     <div class="detail-image listing-placeholder" aria-hidden="true">✦</div>
                 @endif
