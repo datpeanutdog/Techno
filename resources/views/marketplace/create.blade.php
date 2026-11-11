@@ -53,6 +53,7 @@
                     <div>
                         <label class="form-label" for="rent_period">Rental price is per</label>
                         <select class="form-control" id="rent_period" name="rent_period">
+                            <option value="hour" @selected(old('rent_period', $listing->rent_period ?? 'day') === 'hour')>Hour</option>
                             <option value="day" @selected(old('rent_period', $listing->rent_period ?? 'day') === 'day')>Day</option>
                             <option value="week" @selected(old('rent_period', $listing->rent_period ?? '') === 'week')>Week</option>
                             <option value="month" @selected(old('rent_period', $listing->rent_period ?? '') === 'month')>Month</option>

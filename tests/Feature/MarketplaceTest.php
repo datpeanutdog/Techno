@@ -19,6 +19,11 @@ class MarketplaceTest extends TestCase
 
         $response->assertOk()
             ->assertDontSee('School days,')
+            ->assertSee('The student-to-student campus marketplace')
+            ->assertSee('Good school finds,')
+            ->assertSee('right around campus.')
+            ->assertSee('Explore campus finds')
+            ->assertSee('Browse rentals')
             ->assertSee('What do you need for school?')
             ->assertSee('Campus or neighborhood')
             ->assertSee('Search')
@@ -39,6 +44,7 @@ class MarketplaceTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('listings.create'))
             ->assertOk()
             ->assertSee('Post campus listing')
+            ->assertSee('<option value="hour"', false)
             ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Sell</a>'], false);
     }
 
@@ -125,21 +131,25 @@ class MarketplaceTest extends TestCase
     public function test_signed_in_user_can_create_a_rental_listing_with_a_period(): void
     {
         $response = $this->actingAs(User::factory()->create(['name' => 'Jamie Lee']))->post(route('listings.store'), [
-            'title' => 'A lab coat ready to rent',
-            'description' => 'A clean lab coat for science class.',
+            'title' => 'A calculator ready to rent',
+            'description' => 'A scientific calculator for an afternoon exam.',
             'price' => 90,
             'type' => 'rent',
-            'rent_period' => 'week',
-            'category' => 'Uniforms',
-            'location' => 'Science building',
+            'rent_period' => 'hour',
+            'category' => 'Tech & Calculators',
+            'location' => 'Campus library',
         ]);
 
         $response->assertRedirect();
         $this->assertDatabaseHas('listings', [
-            'title' => 'A lab coat ready to rent',
+            'title' => 'A calculator ready to rent',
             'type' => 'rent',
-            'rent_period' => 'week',
+            'rent_period' => 'hour',
         ]);
+        $this->actingAs(User::factory()->create())
+            ->get(route('listings.show', Listing::where('title', 'A calculator ready to rent')->firstOrFail()))
+            ->assertOk()
+            ->assertSee('/ hour');
     }
 
     public function test_rental_listing_requires_a_rental_period(): void

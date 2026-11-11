@@ -3,6 +3,47 @@
 @section('title', 'PASABUY — your campus marketplace')
 
 @section('content')
+    <section class="hero" aria-labelledby="home-hero-title">
+        <div class="hero-copy">
+            <p class="eyebrow"><span class="eyebrow-spark" aria-hidden="true">✦</span> The student-to-student campus marketplace</p>
+            <h1 id="home-hero-title">Good school finds,<br><span>right around campus.</span></h1>
+            <p class="hero-description">Buy, sell, or rent the books, supplies, and everyday essentials that make school feel a little easier.</p>
+            <div class="hero-actions">
+                <a class="button button-gold" href="{{ route('marketplace.index', ['mode' => 'sale']) }}#discover">
+                    <span aria-hidden="true">⌕</span> Explore campus finds
+                </a>
+                <a class="hero-text-link" href="{{ route('marketplace.index', ['mode' => 'rent']) }}#discover">
+                    Need it for a while?<span>Browse rentals →</span>
+                </a>
+            </div>
+            <div class="community-proof">
+                <div class="avatar-stack" aria-hidden="true">
+                    <span class="avatar avatar-peach">▤</span>
+                    <span class="avatar avatar-blue">✎</span>
+                    <span class="avatar avatar-yellow">⌂</span>
+                </div>
+                <span><strong>One campus community</strong><br>Making good finds go further.</span>
+            </div>
+        </div>
+
+        <div class="hero-art" aria-hidden="true">
+            <div class="hero-sun"></div>
+            <div class="hero-sticker sticker-top"><span>✦</span> Good finds<br>live on</div>
+            <div class="hero-object">
+                <div class="object-top"></div>
+                <div class="object-label"><span>Your next<br>school-day find</span><span class="object-spark">✳</span></div>
+                <div class="object-bottom"><span>Made for campus</span><span>PASABUY · 01</span></div>
+            </div>
+            <div class="hero-chip chip-left">
+                <span class="chip-icon chip-green">▤</span> Books &amp; notes
+            </div>
+            <div class="hero-chip chip-right">
+                <span class="chip-icon chip-yellow">↗</span> A find nearby
+            </div>
+            <div class="hero-sticker sticker-bottom">Pass it on <span>→</span></div>
+        </div>
+    </section>
+
     <section class="search-wrap" aria-label="Find a school listing">
         <form class="search-form" method="GET" action="{{ route('marketplace.index') }}">
             @if (request('mode')) <input type="hidden" name="mode" value="{{ request('mode') }}"> @endif
@@ -119,9 +160,29 @@
                             </div>
                             <a class="listing-title" href="{{ route('listings.show', $listing) }}">{{ $listing->title }}</a>
                             <div class="listing-meta"><span aria-hidden="true">⌖</span> {{ $listing->location }}</div>
+                            @if ($listing->user)
+                                <a class="seller-profile-link" href="{{ route('sellers.show', $listing->user) }}">
+                                    {{ $listing->user->name }}
+                                    @if ($listing->user->received_reviews_count)
+                                        · ★ {{ number_format((float) $listing->user->received_reviews_avg_rating, 1) }}
+                                    @else
+                                        · View seller
+                                    @endif
+                                </a>
+                            @endif
                             <div class="listing-card-bottom">
                                 <p class="listing-price">₱{{ number_format((float) $listing->price, $listing->price == (int) $listing->price ? 0 : 2) }}@if ($listing->type === 'rent')<span> / {{ $listing->rent_period }}</span>@endif</p>
-                                <span class="seller-rating"><span aria-hidden="true">★</span> {{ number_format((float) $listing->seller_rating, 1) }}</span>
+                                <span class="seller-rating">
+                                    @if ($listing->user)
+                                        @if ($listing->user->received_reviews_count)
+                                            <span aria-hidden="true">★</span> {{ number_format((float) $listing->user->received_reviews_avg_rating, 1) }}
+                                        @else
+                                            New seller
+                                        @endif
+                                    @else
+                                        <span aria-hidden="true">★</span> {{ number_format((float) $listing->seller_rating, 1) }}
+                                    @endif
+                                </span>
                             </div>
                         </div>
                     </article>

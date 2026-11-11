@@ -23,7 +23,10 @@ class ListingController extends Controller
         ]);
 
         $query = Listing::query()
-            ->with('user:id,name,bio,campus,avatar_path')
+            ->with(['user' => fn ($user) => $user
+                ->select(['id', 'name', 'bio', 'campus', 'avatar_path'])
+                ->withCount('receivedReviews')
+                ->withAvg('receivedReviews', 'rating')])
             ->where('is_available', true)
             ->whereIn('category', ListingCategories::ALL)
             ->where('type', $filters['mode'] ?? 'sale');
@@ -67,7 +70,10 @@ class ListingController extends Controller
     public function show(string $slug): JsonResponse
     {
         $listing = Listing::query()
-            ->with('user:id,name,bio,campus,avatar_path')
+            ->with(['user' => fn ($user) => $user
+                ->select(['id', 'name', 'bio', 'campus', 'avatar_path'])
+                ->withCount('receivedReviews')
+                ->withAvg('receivedReviews', 'rating')])
             ->where('slug', $slug)
             ->where('is_available', true)
             ->whereIn('category', ListingCategories::ALL)

@@ -36,6 +36,16 @@ class User extends Authenticatable
         return $this->hasMany(Conversation::class, 'seller_id');
     }
 
+    public function receivedReviews(): HasMany
+    {
+        return $this->hasMany(SellerReview::class, 'seller_id');
+    }
+
+    public function writtenReviews(): HasMany
+    {
+        return $this->hasMany(SellerReview::class, 'reviewer_id');
+    }
+
     public function getAvatarUrlAttribute(): ?string
     {
         if (! $this->avatar_path) {

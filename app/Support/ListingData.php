@@ -20,7 +20,7 @@ class ListingData
             'description' => ['required', 'string', 'max:1500'],
             'price' => ['required', 'numeric', 'gt:0', 'max:999999999.99'],
             'type' => ['required', 'in:sale,rent'],
-            'rent_period' => ['nullable', 'required_if:type,rent', 'in:day,week,month'],
+            'rent_period' => ['nullable', 'required_if:type,rent', 'in:hour,day,week,month'],
             'category' => ['required', 'in:'.implode(',', ListingCategories::ALL)],
             'location' => ['required', 'string', 'max:100'],
             'image_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\//i'],

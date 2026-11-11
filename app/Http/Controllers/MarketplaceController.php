@@ -24,6 +24,9 @@ class MarketplaceController extends Controller
         ]);
 
         $query = Listing::query()
+            ->with(['user' => fn ($user) => $user
+                ->withCount('receivedReviews')
+                ->withAvg('receivedReviews', 'rating')])
             ->where('is_available', true)
             ->whereIn('category', ListingCategories::ALL);
 
@@ -61,6 +64,9 @@ class MarketplaceController extends Controller
     public function show(Listing $listing): View
     {
         abort_unless($listing->is_available && in_array($listing->category, ListingCategories::ALL, true), 404);
+        $listing->load(['user' => fn ($user) => $user
+            ->withCount('receivedReviews')
+            ->withAvg('receivedReviews', 'rating')]);
 
         $conversation = null;
         if (auth()->check() && $listing->user_id && $listing->user_id !== auth()->id()) {

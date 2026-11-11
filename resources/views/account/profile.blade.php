@@ -31,7 +31,7 @@
             <p class="form-help">JPG, PNG, or WebP, up to 2 MB. You can instead provide a secure photo link below.</p>
             <label class="form-label" for="avatar_url">Or photo link</label>
             <input class="form-control" id="avatar_url" name="avatar_url" type="url" value="{{ old('avatar_url') }}" maxlength="2048" placeholder="https://...">
-            <p class="form-help">Account email: {{ auth()->user()->email }} · <a href="{{ route('my-listings') }}">Manage your listings</a></p>
+            <p class="form-help">Account email: {{ auth()->user()->email }} · <a href="{{ route('my-listings') }}">Manage your listings</a> · <a href="{{ route('sellers.show', auth()->user()) }}">View your public seller profile</a></p>
             <button class="button button-navy form-submit" type="submit">Save profile <span aria-hidden="true">→</span></button>
         </form>
     </section>

@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\SellerController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -18,8 +19,12 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
+Route::get('/sellers/{user}', [SellerController::class, 'show'])->name('sellers.show');
 
 Route::middleware('auth')->group(function (): void {
+    Route::post('/sellers/{user}/reviews', [SellerController::class, 'review'])
+        ->middleware('throttle:5,1')
+        ->name('sellers.reviews.store');
     Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
     Route::get('/profile', [AccountController::class, 'editProfile'])->name('profile.edit');
     Route::put('/profile', [AccountController::class, 'updateProfile'])->name('profile.update');

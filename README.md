@@ -53,7 +53,8 @@ Run `php artisan storage:link` once so uploaded profile photos are publicly avai
 - Open a listing's detail page and see its location, seller, price, and condition.
 - Register, sign in, and recover a password from the website or mobile app.
 - Customize the public profile with a display name, campus, short bio, and uploaded photo or secure photo URL.
-- Post new sale or rental listings after signing in. Rental posts include a day, week, or month price period.
+- View public seller profiles, active listings, and student reviews. Signed-in members can give each seller one 1–5-star review and update it later; reviews are not verified purchases.
+- Post new sale or rental listings after signing in. Rental posts include an hour, day, week, or month price period.
 - View, update, and remove your own listings on either platform.
 - Save favorite finds in the current browser with the heart button.
 - Seeded example listings to explore the marketplace right away.
