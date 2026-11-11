@@ -16,6 +16,11 @@ npm run build
 php artisan serve
 ```
 
+To link the storages:
+```powershell
+php artisan storage:link
+```
+
 Open [http://localhost:8000](http://localhost:8000).
 
 To keep the CSS and JavaScript rebuilding during development, run `npm run dev` in a second terminal.
