@@ -218,7 +218,7 @@ export default function ConversationScreen() {
                 onChangeText={setBody}
                 onSubmitEditing={() => void sendMessage()}
                 placeholder="Write a message..."
-                placeholderTextColor="#9699a4"
+                placeholderTextColor={COLORS.muted}
                 style={screenStyles.composeInput}
                 value={body}
               />
@@ -281,7 +281,7 @@ const screenStyles = StyleSheet.create({
   messageBody: { color: COLORS.ink, fontSize: 13, lineHeight: 19 },
   ownMessageBody: { color: COLORS.white },
   messageDate: { alignSelf: 'flex-end', marginTop: 4, color: COLORS.muted, fontSize: 9 },
-  ownMessageDate: { color: '#d3d2e0' },
+  ownMessageDate: { color: '#e5d6c8' },
   compose: {
     flexDirection: 'row',
     alignItems: 'flex-end',

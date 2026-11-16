@@ -15,6 +15,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="sell" />
         <Stack.Screen name="account" />
+        <Stack.Screen name="support" />
         <Stack.Screen name="listing/[slug]" />
         <Stack.Screen name="seller/[id]" />
         <Stack.Screen name="messages/index" />

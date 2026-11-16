@@ -149,7 +149,7 @@ export default function NewMessageScreen() {
                 multiline
                 onChangeText={setBody}
                 placeholder="Ask a question, make an offer, or arrange a time to meet..."
-                placeholderTextColor="#9699a4"
+                placeholderTextColor={COLORS.muted}
                 style={screenStyles.messageInput}
                 textAlignVertical="top"
                 value={body}

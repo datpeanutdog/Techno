@@ -173,9 +173,11 @@ export default function ListingDetailScreen() {
               <Pressable
                 accessibilityRole="button"
                 onPress={() => router.push({ pathname: '/seller/[id]', params: { id: String(listing.user?.id) } })}
-                style={sellerProfileStyles.link}
+                style={{ alignSelf: 'flex-start', paddingVertical: 8 }}
               >
-                <Text style={sellerProfileStyles.linkText}>View seller profile &amp; reviews →</Text>
+                <Text style={{ color: COLORS.goldDark, fontSize: 11, fontWeight: '700' }}>
+                  View seller profile &amp; reviews →
+                </Text>
               </Pressable>
             ) : null}
             {listing.user?.bio ? <Text style={styles.detailDescription}>{listing.user.bio}</Text> : null}
@@ -187,16 +189,31 @@ export default function ListingDetailScreen() {
               </Text>
             </View>
             {listing.user && listing.user.id !== currentUserId ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push({
-                  pathname: '/messages/new',
-                  params: { listingSlug: listing.slug },
-                })}
-                style={styles.primaryButton}
-              >
-                <Text style={styles.primaryButtonText}>Message seller privately</Text>
-              </Pressable>
+              <>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push({
+                    pathname: '/messages/new',
+                    params: { listingSlug: listing.slug },
+                  })}
+                  style={styles.primaryButton}
+                >
+                  <Text style={styles.primaryButtonText}>Message seller privately</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push({
+                    pathname: '/support',
+                    params: {
+                      reportedUserId: String(listing.user?.id),
+                      reportedUserName: listing.user?.name ?? listing.seller_name,
+                    },
+                  })}
+                  style={[styles.primaryButton, { backgroundColor: COLORS.paleNeutral }]}
+                >
+                  <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>Report this seller</Text>
+                </Pressable>
+              </>
             ) : null}
           </View>
         </ScrollView>
@@ -205,8 +222,3 @@ export default function ListingDetailScreen() {
     </SafeAreaView>
   );
 }
-
-const sellerProfileStyles = {
-  link: { alignSelf: 'flex-start' as const, paddingVertical: 8 },
-  linkText: { color: COLORS.goldDark, fontSize: 11, fontWeight: '700' as const },
-};

@@ -50,6 +50,12 @@ class AccountController extends Controller
             return back()->withErrors(['email' => 'Those login details did not match our records.'])->onlyInput('email');
         }
 
+        if (Auth::user()?->isSuspended()) {
+            $request->session()->regenerate();
+
+            return redirect()->route('account.suspension.show');
+        }
+
         $request->session()->regenerate();
 
         return redirect()->intended(route('marketplace.index'));
@@ -115,7 +121,7 @@ class AccountController extends Controller
             'bio' => ['nullable', 'string', 'max:500'],
             'campus' => ['nullable', 'string', 'max:100'],
             'avatar_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\//i'],
-            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ]);
 
         $user = $request->user();

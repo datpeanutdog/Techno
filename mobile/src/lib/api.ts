@@ -6,6 +6,7 @@ export type ListingType = 'sale' | 'rent';
 
 export type UserProfile = {
   id: number;
+  account_identifier: string;
   name: string;
   email: string;
   bio: string | null;
@@ -110,12 +111,16 @@ export async function clearAuthToken(): Promise<void> {
   cachedAuthToken = null;
 }
 
-export async function requestJson<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
+export async function requestJson<T>(
+  path: string,
+  init?: RequestInit,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<ApiResponse<T>> {
   let response: Response;
   let result: ApiResponse<T>;
   const token = await getAuthToken();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
 
   try {

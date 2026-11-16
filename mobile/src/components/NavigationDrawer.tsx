@@ -21,16 +21,16 @@ import {
 } from '../lib/api';
 
 const COLORS = {
-  navy: '#202348',
-  navyDeep: '#171a39',
-  gold: '#e9aa31',
-  cream: '#fcfaf5',
-  white: '#fffefa',
-  ink: '#292c43',
-  muted: '#777d8c',
-  line: '#e9e7df',
+  navy: '#4a382c',
+  navyDeep: '#33251d',
+  gold: '#dfa13b',
+  cream: '#f4ede2',
+  white: '#fffdf8',
+  ink: '#3e3027',
+  muted: '#7f7468',
+  line: '#e7ddcf',
   paleGold: '#f5efdf',
-  paleBlue: '#e9ebf3',
+  paleNeutral: '#efe5d8',
 };
 
 const MESSAGE_POLL_INTERVAL_MS = 30_000;
@@ -182,7 +182,7 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
     setVisible(false);
   }, []);
 
-  const navigate = useCallback((path: '/account' | '/messages' | '/sell' | '/', mode?: 'rent' | 'sale' | 'saved') => {
+  const navigate = useCallback((path: '/account' | '/messages' | '/sell' | '/support' | '/', mode?: 'rent' | 'sale' | 'saved') => {
     closeDrawer();
     if (path === '/' && mode) {
       router.replace(mode === 'saved'
@@ -277,6 +277,11 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
                 label="Message inbox"
                 onPress={() => navigate('/messages')}
               />
+              <DrawerLink
+                icon="?"
+                label="Customer support"
+                onPress={() => navigate('/support')}
+              />
 
               {error ? <Text style={drawerStyles.error}>{error}</Text> : null}
             </ScrollView>
@@ -340,7 +345,7 @@ function DrawerLink({
 }
 
 const drawerStyles = StyleSheet.create({
-  modal: { flex: 1, flexDirection: 'row', backgroundColor: '#171a3980' },
+  modal: { flex: 1, flexDirection: 'row', backgroundColor: '#33251d80' },
   backdrop: { flex: 1 },
   panel: {
     width: '84%',
@@ -378,7 +383,7 @@ const drawerStyles = StyleSheet.create({
   avatarInitial: { color: COLORS.gold, fontSize: 22, fontWeight: '700' },
   profileCopy: { flex: 1, minWidth: 0 },
   profileName: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
-  profileAction: { marginTop: 4, color: '#d3d2e0', fontSize: 11 },
+  profileAction: { marginTop: 4, color: '#e5d6c8', fontSize: 11 },
   profileArrow: { color: COLORS.gold, fontSize: 24 },
   sectionLabel: {
     marginBottom: 11,
@@ -431,8 +436,10 @@ const drawerStyles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.line,
     borderRadius: 12,
-    backgroundColor: COLORS.paleBlue,
+    backgroundColor: COLORS.white,
   },
   menuButtonText: { color: COLORS.navy, fontSize: 19, fontWeight: '700' },
   menuBadge: {

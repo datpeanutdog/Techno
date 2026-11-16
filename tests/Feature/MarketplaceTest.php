@@ -19,13 +19,9 @@ class MarketplaceTest extends TestCase
 
         $response->assertOk()
             ->assertDontSee('School days,')
-            ->assertSee('The student-to-student campus marketplace')
-            ->assertSee('Good school finds,')
-            ->assertSee('right around campus.')
-            ->assertSee('Explore campus finds')
-            ->assertSee('Browse rentals')
-            ->assertSee('What do you need for school?')
-            ->assertSee('Campus or neighborhood')
+            ->assertSee('Search campus listings')
+            ->assertSee('Filter by category')
+            ->assertSee('All categories')
             ->assertSee('Search')
             ->assertSee('Engineering calculus book set')
             ->assertSee('Laptop for classes & projects')
@@ -36,7 +32,7 @@ class MarketplaceTest extends TestCase
             ->assertSee('>Buy<', false)
             ->assertSee('Find something to keep')
             ->assertSee('Borrow it for a while')
-            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Buy</a>'], false);
+            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Buy</span>'], false);
     }
 
     public function test_sell_navigation_opens_listing_form_and_marks_sell_as_active(): void
@@ -45,7 +41,7 @@ class MarketplaceTest extends TestCase
             ->assertOk()
             ->assertSee('Post campus listing')
             ->assertSee('<option value="hour"', false)
-            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Sell</a>'], false);
+            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Sell</span>'], false);
     }
 
     public function test_search_filters_listings_by_keyword_and_location(): void
@@ -181,10 +177,10 @@ class MarketplaceTest extends TestCase
         $user = User::factory()->create();
 
         $this->get('/')->assertOk()
-            ->assertSee('What do you need for school?')
+            ->assertSee('Search campus listings')
             ->assertSee('Join PASABUY');
         $this->get('/?mode=rent')->assertOk()->assertSee('Scientific calculator for exams');
-        $this->actingAs($user)->get('/')->assertOk()->assertSee('What do you need for school?');
+        $this->actingAs($user)->get('/')->assertOk()->assertSee('Search campus listings');
         $this->post('/logout')->assertRedirect(route('marketplace.index'));
     }
 

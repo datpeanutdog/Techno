@@ -43,6 +43,12 @@ class AccountController extends Controller
             return response()->json(['message' => 'Those login details did not match our records.'], 422);
         }
 
+        if ($user->isSuspended()) {
+            return response()->json([
+                'message' => 'This account is suspended. Contact customer support for assistance.',
+            ], 403);
+        }
+
         return response()->json([
             'data' => $this->userPayload($user),
             'token' => $user->createToken('pasabuy-mobile')->plainTextToken,
@@ -99,7 +105,7 @@ class AccountController extends Controller
             'bio' => ['nullable', 'string', 'max:500'],
             'campus' => ['nullable', 'string', 'max:100'],
             'avatar_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\//i'],
-            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ]);
 
         $user = $request->user();
@@ -121,12 +127,13 @@ class AccountController extends Controller
     }
 
     /**
-     * @return array{id: int, name: string, email: string, bio: ?string, campus: ?string, avatar_url: ?string}
+     * @return array{id: int, account_identifier: string, name: string, email: string, bio: ?string, campus: ?string, avatar_url: ?string}
      */
     private function userPayload(User $user): array
     {
         return [
             'id' => $user->id,
+            'account_identifier' => $user->account_identifier,
             'name' => $user->name,
             'email' => $user->email,
             'bio' => $user->bio,
