@@ -4,7 +4,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\MessageController;
-use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Route
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/register', [AccountController::class, 'registerForm'])->name('register');
