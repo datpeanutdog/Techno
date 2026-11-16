@@ -1,13 +1,13 @@
 {
   "planHash": "fbb56563d53ecaad1f86577d48272264d809b1c645e5dfc5a8e56f7962187887",
   "phase": "standalone",
-  "recordedAtUtc": "2026-11-04T06:34:39.3128305Z",
-  "retryCount": 0,
+  "recordedAtUtc": "2026-11-16T10:21:14.1681752Z",
+  "retryCount": 2,
   "resetBaseline": false,
   "complete": true,
   "result": {
     "setupSucceeded": true,
-    "setupDurationMs": 113545,
+    "setupDurationMs": 80406,
     "setupFailureOutput": null,
     "assertions": [
       {
@@ -19,8 +19,8 @@
         "skipped": false,
         "skippedReason": null,
         "exitCode": 0,
-        "outputSample": "\r\n\u003E test\r\n\u003E php artisan test\r\n\r\n{\u0022tool\u0022:\u0022phpunit\u0022,\u0022result\u0022:\u0022passed\u0022,\u0022tests\u0022:33,\u0022passed\u0022:33,\u0022assertions\u0022:144,\u0022duration_ms\u0022:5402}\r\n",
-        "durationMs": 9352,
+        "outputSample": "\r\n\u003E test\r\n\u003E php artisan test\r\n\r\n{\u0022tool\u0022:\u0022phpunit\u0022,\u0022result\u0022:\u0022passed\u0022,\u0022tests\u0022:65,\u0022passed\u0022:65,\u0022assertions\u0022:323,\u0022duration_ms\u0022:4209}\r\n",
+        "durationMs": 6266,
         "testResults": {
           "testFramework": "unknown",
           "runnerDetectedFrom": "none",
@@ -40,8 +40,8 @@
         "skipped": false,
         "skippedReason": null,
         "exitCode": 0,
-        "outputSample": "\r\n\u003E build\r\n\u003E vite build\r\n\r\n\u001B[36mvite v8.3.5 \u001B[32mbuilding client environment for production...\u001B[36m\u001B[39m\r\ntransforming...\r\n\u2713 3 modules transformed.\r\nrendering chunks...\r\ncomputing gzip size...\r\npublic/build/manifest.json             0.33 kB \u2502 gzip:  0.16 kB\r\npublic/build/assets/app-BFZ5ZBsR.css  85.61 kB \u2502 gzip: 18.68 kB\r\npublic/build/assets/app-CPCz7_Xh.js    1.24 kB \u2502 gzip:  0.60 kB\r\n\r\n\u001B[32m\u2713 built in 572ms\u001B[39m\r\n",
-        "durationMs": 2761
+        "outputSample": "\r\n\u003E build\r\n\u003E vite build\r\n\r\n\u001B[36mvite v8.3.5 \u001B[32mbuilding client environment for production...\u001B[36m\u001B[39m\r\ntransforming...\r\n\u2713 3 modules transformed.\r\nrendering chunks...\r\ncomputing gzip size...\r\npublic/build/manifest.json             0.33 kB \u2502 gzip:  0.16 kB\r\npublic/build/assets/app-DY9ZSlXC.css  99.65 kB \u2502 gzip: 21.06 kB\r\npublic/build/assets/app-DOinKfM1.js    3.06 kB \u2502 gzip:  1.05 kB\r\n\r\n\u001B[32m\u2713 built in 351ms\u001B[39m\r\n",
+        "durationMs": 1619
       },
       {
         "name": "expo-typecheck",
@@ -53,7 +53,7 @@
         "skippedReason": null,
         "exitCode": 0,
         "outputSample": "",
-        "durationMs": 6635
+        "durationMs": 5107
       },
       {
         "name": "expo-web-export",
@@ -64,8 +64,8 @@
         "skipped": false,
         "skippedReason": null,
         "exitCode": 0,
-        "outputSample": "Starting Metro Bundler\r\n\r\nWeb Bundled 1679ms node_modules\\expo-router\\entry.js (800 modules)\r\n\r\n\u203A Assets (18):\r\nnode_modules\\expo-router\\assets\\arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png (9.5KB)\r\nnode_modules\\expo-router\\assets\\error.d1ea1496f9057eb392d5bbf3732a61b7.png (469B)\r\nnode_modules\\expo-router\\assets\\file.19eeb73b9593a38f8e9f418337fc7d10.png (138B)\r\nnode_modules\\expo-router\\assets\\forward.d8b800c443b8972542883e0b9de2bdc6.png (188B)\r\nnode_modules\\expo-router\\assets\\pkg.ab19f4cbc543357183a20571f68380a3.png (364B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png (653B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png (207B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png (4 variations | 425B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\close-icon.808e1b1b9b53114ec2838071a7e6daa7.png (4 variations | 235B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png (928B)\r\nnode_modules\\expo-router\\assets\\sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png (465B)\r\nnode_modules\\expo-router\\assets\\unmatched.20e71bdf79e3a97bf55fd9e164041578.png (4.8KB)\r\n\r\n\u203A web bundles (8):\r\n_expo/static/js/web/__common-c0cd9f091659215a168c61663e18353f.js (50KB)\r\n_expo/static/js/web/__expo-metro-runtime-97703ae02682710149335928b974f18d.js (10KB)\r\n_expo/static/js/web/_layout-3a8e193253b4c5015ab296be92d4c722.js (551B)\r\n_expo/static/js/web/[slug]-747b0b114461ba4a156cab11baa0bfce.js (5.5KB)\r\n_expo/static/js/web/account-b5f0844605cf200062ff8223ff155853.js (21KB)\r\n_expo/static/js/web/entry-5b911e957456b67b677df90e6a4ef46b.js (1.1MB)\r\n_expo/static/js/web/index-818e6f11bacaa42e5b5e6d68b12485da.js (241B)\r\n_expo/static/js/web/sell-80fe831eaab343f4dce1668ac6a56435.js (7.2KB)\r\n\r\n\u203A Files (3):\r\nfavicon.ico (15KB)\r\nindex.html (1.4KB)\r\nmetadata.json (49B)\r\n\r\nExported: .tsupgrader/runtime-validation/expo-web\r\n",
-        "durationMs": 12531
+        "outputSample": "Starting Metro Bundler\r\n\r\nWeb Bundled 1255ms node_modules\\expo-router\\entry.js (819 modules)\r\n\r\n\u203A Assets (18):\r\nnode_modules\\expo-router\\assets\\arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png (9.5KB)\r\nnode_modules\\expo-router\\assets\\error.d1ea1496f9057eb392d5bbf3732a61b7.png (469B)\r\nnode_modules\\expo-router\\assets\\file.19eeb73b9593a38f8e9f418337fc7d10.png (138B)\r\nnode_modules\\expo-router\\assets\\forward.d8b800c443b8972542883e0b9de2bdc6.png (188B)\r\nnode_modules\\expo-router\\assets\\pkg.ab19f4cbc543357183a20571f68380a3.png (364B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png (653B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png (207B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png (4 variations | 425B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\close-icon.808e1b1b9b53114ec2838071a7e6daa7.png (4 variations | 235B)\r\nnode_modules\\expo-router\\assets\\react-navigation\\elements\\search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png (928B)\r\nnode_modules\\expo-router\\assets\\sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png (465B)\r\nnode_modules\\expo-router\\assets\\unmatched.20e71bdf79e3a97bf55fd9e164041578.png (4.8KB)\r\n\r\n\u203A web bundles (12):\r\n_expo/static/js/web/__common-8ed1ed816b6b7cf06c023690dc20f079.js (68KB)\r\n_expo/static/js/web/__expo-metro-runtime-97703ae02682710149335928b974f18d.js (10KB)\r\n_expo/static/js/web/_layout-e55e71291df7afda570b597a8568d92a.js (804B)\r\n_expo/static/js/web/[id]-6da5d9ae4219f7f40a74ace13899babd.js (7.4KB)\r\n_expo/static/js/web/[slug]-fbffbed35d826959540b8067026b4d0e.js (6.2KB)\r\n_expo/static/js/web/account-b6581af00419fdec0eeee3bfa928136b.js (27KB)\r\n_expo/static/js/web/entry-93bdf06dad24f5729ef80c43640f4f29.js (1.1MB)\r\n_expo/static/js/web/index-0bc56702287b70ca07916fe04cd268b3.js (5.7KB)\r\n_expo/static/js/web/index-55b0adbe39f27037644745f72a2caf66.js (241B)\r\n_expo/static/js/web/new-10710777cae1b6aba6e7ced0cc52cc09.js (4.8KB)\r\n_expo/static/js/web/sell-8c3d42b2c5545d078d209a3cc92c0208.js (7.2KB)\r\n_expo/static/js/web/support-b25bca499f664f49c469b56239753759.js (7.6KB)\r\n\r\n\u203A Files (3):\r\nfavicon.ico (15KB)\r\nindex.html (1.4KB)\r\nmetadata.json (49B)\r\n\r\nExported: .tsupgrader/runtime-validation/expo-web\r\n",
+        "durationMs": 6283
       },
       {
         "name": "listings-api-responds",
@@ -77,7 +77,7 @@
         "skippedReason": null,
         "exitCode": 0,
         "outputSample": "",
-        "durationMs": 2245
+        "durationMs": 193
       },
       {
         "name": "expo-web-serves",
@@ -88,8 +88,8 @@
         "skipped": false,
         "skippedReason": null,
         "exitCode": null,
-        "outputSample": "HTTP 200\n\u003C!doctype html\u003E\n\u003Chtml lang=\u0022en\u0022\u003E\n  \u003Chead\u003E\n    \u003Cmeta charset=\u0022utf-8\u0022 /\u003E\n    \u003Cmeta httpEquiv=\u0022X-UA-Compatible\u0022 content=\u0022IE=edge\u0022 /\u003E\n    \u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1, shrink-to-fit=no\u0022 /\u003E\n    \u003Ctitle\u003EPASABUY\u003C/title\u003E\n    \u003C!-- The \u0060react-native-web\u0060 recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element --\u003E\n    \u003Cstyle id=\u0022expo-reset\u0022\u003E\n      /* These styles make the body full-height */\n      html,\n      body {\n        height: 100%;\n      }\n      /* These styles disable body scrolling if you are using \u003CScrollView\u003E */\n      body {\n        overflow: hidden;\n      }\n      /* These styles make the root element full-height */\n      #root {\n        display: flex;\n        height: 100%;\n        flex: 1;\n      }\n    \u003C/style\u003E\n  \u003C/head\u003E\n\n  \u003Cbody\u003E\n    \u003C!-- Use static rendering with Expo Router to support running without JavaScript. --\u003E\n    \u003Cnoscript\u003E You need to enable JavaScript to run this app. \u003C/noscript\u003E\n    \u003C!-- The root element for your Expo app. --\u003E\n    \u003Cdiv id=\u0022root\u0022\u003E\u003C/div\u003E\n  \u003Cscript src=\u0022/node_modules/expo-router/entry.bundle?platform=web\u0026dev=true\u0026hot=false\u0026lazy=true\u0026transform.engine=hermes\u0026transform.routerRoot=app\u0026unstable_transformProfile=hermes-stable\u0022 defer\u003E\u003C/script\u003E\u003C/body\u003E\n\u003C/html\u003E\n\n--- server output ---\nStarting project at C:\\Users\\Joshlie\\Documents\\Techno\\mobile\r\nMetro is running in CI mode, reloads are disabled. Remove CI=true to enable watch mode.\r\nStarting Metro Bundler\r\n\r\nWaiting on http://localhost:8082\r\n\r\nLogs for your project will appear below.\r\n",
-        "durationMs": 10444
+        "outputSample": "HTTP 200\n\u003C!doctype html\u003E\n\u003Chtml lang=\u0022en\u0022\u003E\n  \u003Chead\u003E\n    \u003Cmeta charset=\u0022utf-8\u0022 /\u003E\n    \u003Cmeta httpEquiv=\u0022X-UA-Compatible\u0022 content=\u0022IE=edge\u0022 /\u003E\n    \u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1, shrink-to-fit=no\u0022 /\u003E\n    \u003Ctitle\u003EPASABUY\u003C/title\u003E\n    \u003C!-- The \u0060react-native-web\u0060 recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element --\u003E\n    \u003Cstyle id=\u0022expo-reset\u0022\u003E\n      /* These styles make the body full-height */\n      html,\n      body {\n        height: 100%;\n      }\n      /* These styles disable body scrolling if you are using \u003CScrollView\u003E */\n      body {\n        overflow: hidden;\n      }\n      /* These styles make the root element full-height */\n      #root {\n        display: flex;\n        height: 100%;\n        flex: 1;\n      }\n    \u003C/style\u003E\n  \u003C/head\u003E\n\n  \u003Cbody\u003E\n    \u003C!-- Use static rendering with Expo Router to support running without JavaScript. --\u003E\n    \u003Cnoscript\u003E You need to enable JavaScript to run this app. \u003C/noscript\u003E\n    \u003C!-- The root element for your Expo app. --\u003E\n    \u003Cdiv id=\u0022root\u0022\u003E\u003C/div\u003E\n  \u003Cscript src=\u0022/node_modules/expo-router/entry.bundle?platform=web\u0026dev=true\u0026hot=false\u0026lazy=true\u0026transform.engine=hermes\u0026transform.routerRoot=app\u0026unstable_transformProfile=hermes-stable\u0022 defer\u003E\u003C/script\u003E\u003C/body\u003E\n\u003C/html\u003E\n",
+        "durationMs": 25
       }
     ],
     "executions": [

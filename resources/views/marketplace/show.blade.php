@@ -55,6 +55,9 @@
                     @else
                         <a class="button button-navy message-seller-button" href="{{ route('listings.messages.create', $listing) }}">Log in to message the seller <span aria-hidden="true">→</span></a>
                     @endauth
+                    @auth
+                        <a class="support-report-link" href="{{ route('support.reports.create', ['reported_user_id' => $listing->user_id]) }}">Report this account to support</a>
+                    @endauth
                 @endif
                 <div class="detail-safety">
                     <span aria-hidden="true">✳</span>

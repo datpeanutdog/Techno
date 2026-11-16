@@ -36,7 +36,7 @@ class AccountTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'jamie@example.test']);
 
-        $this->get('/')->assertOk()->assertSee('What do you need for school?');
+        $this->get('/')->assertOk()->assertSee('Search campus listings');
         $this->post('/login', [
             'email' => $user->email,
             'password' => 'password',
@@ -59,9 +59,24 @@ class AccountTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_web_user_can_upload_a_profile_photo_up_to_ten_megabytes(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->put('/profile', [
+            'name' => $user->name,
+            'avatar' => UploadedFile::fake()->create('profile.jpg', 10 * 1024, 'image/jpeg'),
+        ])->assertRedirect();
+
+        $updated = $user->fresh();
+        Storage::disk('public')->assertExists($updated->avatar_path);
+    }
+
     public function test_mobile_registration_returns_a_token_and_allows_listing(): void
     {
         Notification::fake();
+        $existingUser = User::factory()->create();
 
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Jamie Lee',
@@ -70,9 +85,11 @@ class AccountTest extends TestCase
             'password_confirmation' => 'Correct-Horse-123!',
         ])->assertCreated()
             ->assertJsonPath('data.email', 'jamie@example.test')
+            ->assertJsonPath('data.account_identifier', 'ACC-000002')
             ->assertJsonPath('message', 'Your account is ready.');
 
         $this->assertNotEmpty($response->json('token'));
+        $this->assertNotSame($existingUser->account_identifier, $response->json('data.account_identifier'));
         $this->assertDatabaseHas('personal_access_tokens', ['tokenable_type' => User::class]);
         Notification::assertNothingSent();
         $this->withToken($response->json('token'))->postJson('/api/listings', [
@@ -136,7 +153,7 @@ class AccountTest extends TestCase
             'name' => 'Jamie Campus',
             'bio' => 'Engineering student',
             'campus' => 'Main Campus',
-            'avatar' => UploadedFile::fake()->create('profile.png', 10, 'image/png'),
+            'avatar' => UploadedFile::fake()->create('profile.jpg', 10 * 1024, 'image/jpeg'),
         ])->assertOk()
             ->assertJsonPath('data.name', 'Jamie Campus')
             ->assertJsonPath('data.campus', 'Main Campus');
@@ -144,5 +161,17 @@ class AccountTest extends TestCase
         $updated = $user->fresh();
         $this->assertSame('Engineering student', $updated->bio);
         Storage::disk('public')->assertExists($updated->avatar_path);
+    }
+
+    public function test_mobile_profile_rejects_a_photo_larger_than_ten_megabytes(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')->post('/api/auth/profile', [
+            '_method' => 'PUT',
+            'name' => $user->name,
+            'avatar' => UploadedFile::fake()->create('profile.jpg', (10 * 1024) + 1, 'image/jpeg'),
+        ])->assertUnprocessable()
+            ->assertJsonPath('errors.avatar.0', 'The avatar field must not be greater than 10240 kilobytes.');
     }
 }
