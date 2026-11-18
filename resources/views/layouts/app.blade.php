@@ -9,9 +9,10 @@
     <title>@yield('title', 'PASABUY — your neighborhood marketplace')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-@php($hasSidebar = ! request()->routeIs('login', 'register', 'password.*', 'account.suspension.*'))
+@php($hasSidebar = auth()->check() && ! request()->routeIs('login', 'register', 'password.*', 'account.suspension.*'))
+@php($isLandingPage = ! auth()->check() && request()->routeIs('marketplace.index'))
 <body>
-    <div class="site-layout {{ $hasSidebar ? 'has-sidebar' : '' }}">
+    <div class="site-layout {{ $hasSidebar ? 'has-sidebar' : '' }} {{ $isLandingPage ? 'landing-layout' : '' }}">
         @if ($hasSidebar)
             <aside class="site-sidebar" id="site-sidebar" aria-label="Site navigation">
                 <div class="sidebar-heading">
@@ -52,7 +53,7 @@
                         <a href="{{ route('conversations.index') }}" @if (request()->routeIs('conversations.*')) aria-current="page" @endif>
                             <span class="sidebar-nav-icon" aria-hidden="true">✉</span><span>Messages</span>
                         </a>
-                        <a href="{{ route('support.reports.mine') }}" @if (request()->routeIs('support.reports.*')) aria-current="page" @endif>
+                        <a class="support-nav-link" href="{{ route('support.reports.mine') }}" @if (request()->routeIs('support.reports.*')) aria-current="page" @endif>
                             <span class="sidebar-nav-icon" aria-hidden="true">?</span><span>Support</span>
                         </a>
                         <a href="{{ route('profile.edit') }}" @if (request()->routeIs('profile.edit')) aria-current="page" @endif>
@@ -122,6 +123,11 @@
                         <a class="button button-navy header-sell" href="{{ route('listings.create') }}">
                             <span aria-hidden="true">＋</span> List an item
                         </a>
+                    @elseif (request()->routeIs('marketplace.index'))
+                        <nav class="landing-header-nav" aria-label="Account navigation">
+                            <a class="landing-header-login" href="{{ route('marketplace.index', ['panel' => 'login']) }}">Log in</a>
+                            <a class="button button-navy landing-header-join" href="{{ route('marketplace.index') }}#account-form">Join PASABUY <span aria-hidden="true">→</span></a>
+                        </nav>
                     @endif
                 </div>
             </header>
@@ -133,16 +139,18 @@
                 @yield('content')
             </main>
 
-            <footer class="site-footer">
-                <div class="footer-inner">
-                    <a class="brand footer-brand" href="{{ route('marketplace.index') }}">
-                        <span class="brand-mark" aria-hidden="true">✳</span>
-                        <span class="brand-word">pasa<span>buy</span></span>
-                    </a>
-                    <p>Good finds, shared by students like you.</p>
-                    <span class="footer-note">Buy · sell · rent · pass it on</span>
-                </div>
-            </footer>
+            @unless ($isLandingPage)
+                <footer class="site-footer">
+                    <div class="footer-inner">
+                        <a class="brand footer-brand" href="{{ route('marketplace.index') }}">
+                            <span class="brand-mark" aria-hidden="true">✳</span>
+                            <span class="brand-word">pasa<span>buy</span></span>
+                        </a>
+                        <p>Good finds, shared by students like you.</p>
+                        <span class="footer-note">Buy · sell · rent · pass it on</span>
+                    </div>
+                </footer>
+            @endunless
         </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

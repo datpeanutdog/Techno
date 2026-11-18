@@ -23,7 +23,10 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
-Route::get('/sellers/{user}', [SellerController::class, 'show'])->name('sellers.show');
+
+Route::middleware('auth')->group(function (): void {
+    Route::get('/sellers/{user}', [SellerController::class, 'show'])->name('sellers.show');
+});
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
@@ -94,4 +97,6 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
         });
 });
 
-Route::get('/listings/{listing:slug}', [MarketplaceController::class, 'show'])->name('listings.show');
+Route::get('/listings/{listing:slug}', [MarketplaceController::class, 'show'])
+    ->middleware('auth')
+    ->name('listings.show');
