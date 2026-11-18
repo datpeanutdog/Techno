@@ -1,9 +1,12 @@
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,6 +17,7 @@ import {
 } from 'react-native';
 import { COLORS, CATEGORY_ICONS, ChoiceChip, Label, styles } from '../App';
 import { getAuthToken, Listing, ListingType, requestJson } from '../src/lib/api';
+import { MenuButton } from '../src/components/NavigationDrawer';
 
 const categories = Object.keys(CATEGORY_ICONS);
 
@@ -28,6 +32,8 @@ export default function SellScreen() {
   const [category, setCategory] = useState(categories[0]);
   const location = useRef('');
   const imageUrl = useRef('');
+  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [condition, setCondition] = useState('');
   const [posting, setPosting] = useState(false);
   const [loadingListing, setLoadingListing] = useState(true);
@@ -56,7 +62,7 @@ export default function SellScreen() {
         description.current = current.description;
         price.current = String(current.price);
         location.current = current.location;
-        imageUrl.current = current.image_url ?? '';
+        imageUrl.current = current.image_path ? '' : current.image_url ?? '';
         setType(current.type);
         setRentPeriod(current.rent_period ?? 'day');
         setCategory(current.category);
@@ -71,24 +77,73 @@ export default function SellScreen() {
     return () => { active = false; };
   }, [editId]);
 
+  const pickImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Photo access needed', 'Allow PASABUY to access your photos to add a listing photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.85,
+      });
+
+      if (result.canceled) return;
+
+      const selectedImage = result.assets[0];
+      if (selectedImage.mimeType && !['image/jpeg', 'image/png', 'image/webp'].includes(selectedImage.mimeType)) {
+        setError('Choose a JPG, PNG, or WebP photo.');
+        return;
+      }
+      if (selectedImage.fileSize && selectedImage.fileSize > 2 * 1024 * 1024) {
+        setError('Choose a photo that is no larger than 2 MB.');
+        return;
+      }
+
+      setError('');
+      setImage(selectedImage);
+      setRemoveImage(false);
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : 'Your photo could not be selected.');
+    }
+  };
+
   const submitListing = async () => {
     setError('');
     setPosting(true);
 
     try {
+      const form = new FormData();
+      if (editId) form.append('_method', 'PUT');
+      form.append('title', title.current);
+      form.append('description', description.current);
+      form.append('price', String(Number(price.current)));
+      form.append('type', type);
+      form.append('rent_period', type === 'rent' ? rentPeriod : '');
+      form.append('category', category);
+      form.append('location', location.current);
+      form.append('image_url', imageUrl.current.trim());
+      form.append('remove_image', removeImage ? '1' : '0');
+      form.append('condition', condition);
+      if (image) {
+        if (Platform.OS === 'web' && image.file) {
+          form.append('image', image.file);
+        } else {
+          form.append('image', {
+            uri: image.uri,
+            name: image.fileName ?? 'listing-photo.jpg',
+            type: image.mimeType ?? 'image/jpeg',
+          } as unknown as Blob);
+        }
+      }
+
       const result = await requestJson<Listing>(editId ? `/my-listings/${editId}` : '/listings', {
-        method: editId ? 'PUT' : 'POST',
-        body: JSON.stringify({
-          title: title.current,
-          description: description.current,
-          price: Number(price.current),
-          type,
-          rent_period: type === 'rent' ? rentPeriod : null,
-          category,
-          location: location.current,
-          image_url: imageUrl.current.trim() || null,
-          condition: condition || null,
-        }),
+        method: 'POST',
+        body: form,
       });
 
       router.replace({ pathname: '/listing/[slug]', params: { slug: result.data.slug } });
@@ -112,7 +167,7 @@ export default function SellScreen() {
           <Text style={styles.backButtonText}>‹  Back</Text>
         </Pressable>
         <Text style={styles.headerRouteTitle}>{editId ? 'Edit listing' : 'New listing'}</Text>
-        <View style={styles.routeHeaderSpacer} />
+        <MenuButton />
       </View>
 
       <KeyboardAvoidingView
@@ -197,7 +252,7 @@ export default function SellScreen() {
                 <View style={styles.formHalf}>
                   <Label required>Price per</Label>
                   <View style={styles.periodRow}>
-                    {['day', 'week', 'month'].map((period) => (
+                    {['hour', 'day', 'week', 'month'].map((period) => (
                       <ChoiceChip
                         key={period}
                         label={period}
@@ -234,10 +289,39 @@ export default function SellScreen() {
               style={styles.formInput}
             />
 
-            <Label>Photo link (optional)</Label>
+            <Label>Listing photo (JPG, PNG, or WebP; up to 2 MB)</Label>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={image ? 'Change listing photo' : 'Choose listing photo'}
+              onPress={() => void pickImage()}
+              style={{ minHeight: 150, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 8, backgroundColor: '#f8f6f0', overflow: 'hidden' }}
+            >
+              {image ? (
+                <Image source={{ uri: image.uri }} style={{ width: '100%', height: 150 }} resizeMode="cover" />
+              ) : listing?.image_url && !removeImage ? (
+                <Image source={{ uri: listing.image_url }} style={{ width: '100%', height: 150 }} resizeMode="cover" />
+              ) : (
+                <Text style={{ color: COLORS.muted, fontSize: 12 }}>Tap to choose a photo</Text>
+              )}
+            </Pressable>
+            {image ? (
+              <Pressable onPress={() => setImage(null)} style={{ marginTop: 6 }}>
+                <Text style={{ color: COLORS.goldDark, fontSize: 12 }}>Clear selected photo</Text>
+              </Pressable>
+            ) : null}
+            {listing?.image_path && !removeImage ? (
+              <Pressable
+                onPress={() => { setRemoveImage(true); setImage(null); }}
+                style={{ marginTop: 6 }}
+              >
+                <Text style={{ color: COLORS.goldDark, fontSize: 12 }}>Remove current uploaded photo</Text>
+              </Pressable>
+            ) : null}
+
+            <Label>Or a photo link (optional)</Label>
             <TextInput
               autoCapitalize="none"
-              defaultValue={listing?.image_url ?? undefined}
+              defaultValue={listing?.image_path ? '' : listing?.image_url ?? undefined}
               keyboardType="url"
               onChangeText={(value) => { imageUrl.current = value; }}
               placeholder="https://..."

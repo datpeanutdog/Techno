@@ -21,6 +21,7 @@ import {
   requestJson,
   UserProfile,
 } from '../../src/lib/api';
+import { MenuButton } from '../../src/components/NavigationDrawer';
 
 export default function ListingDetailScreen() {
   const params = useLocalSearchParams<{ slug: string }>();
@@ -97,7 +98,7 @@ export default function ListingDetailScreen() {
           <Text style={styles.backButtonText}>‹  Back</Text>
         </Pressable>
         <Text style={styles.headerRouteTitle}>Listing details</Text>
-        <View style={styles.routeHeaderSpacer} />
+        <MenuButton />
       </View>
 
       {loading ? (
@@ -151,7 +152,13 @@ export default function ListingDetailScreen() {
               </View>
               <View style={styles.sellerCopy}>
                 <Text style={styles.sellerName}>{listing.user?.name ?? listing.seller_name}</Text>
-                <Text style={styles.sellerSubline}>{listing.user?.campus ?? 'Student seller'}  ·  ★ {Number(listing.seller_rating).toFixed(1)}</Text>
+                <Text style={styles.sellerSubline}>
+                  {listing.user?.campus ?? 'Student seller'}  ·  {listing.user
+                    ? listing.user.received_reviews_count
+                      ? `★ ${Number(listing.user.received_reviews_avg_rating).toFixed(1)} (${listing.user.received_reviews_count})`
+                      : 'No reviews yet'
+                    : `★ ${Number(listing.seller_rating).toFixed(1)}`}
+                </Text>
               </View>
               <Pressable
                 accessibilityLabel={savedIds.includes(listing.id) ? 'Remove saved item' : 'Save item'}
@@ -162,6 +169,17 @@ export default function ListingDetailScreen() {
                 </Text>
               </Pressable>
             </View>
+            {listing.user ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push({ pathname: '/seller/[id]', params: { id: String(listing.user?.id) } })}
+                style={{ alignSelf: 'flex-start', paddingVertical: 8 }}
+              >
+                <Text style={{ color: COLORS.goldDark, fontSize: 11, fontWeight: '700' }}>
+                  View seller profile &amp; reviews →
+                </Text>
+              </Pressable>
+            ) : null}
             {listing.user?.bio ? <Text style={styles.detailDescription}>{listing.user.bio}</Text> : null}
             {error ? <Text style={styles.formError}>{error}</Text> : null}
             <View style={styles.safetyNote}>
@@ -171,16 +189,31 @@ export default function ListingDetailScreen() {
               </Text>
             </View>
             {listing.user && listing.user.id !== currentUserId ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push({
-                  pathname: '/messages/new',
-                  params: { listingSlug: listing.slug },
-                })}
-                style={styles.primaryButton}
-              >
-                <Text style={styles.primaryButtonText}>Message seller privately</Text>
-              </Pressable>
+              <>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push({
+                    pathname: '/messages/new',
+                    params: { listingSlug: listing.slug },
+                  })}
+                  style={styles.primaryButton}
+                >
+                  <Text style={styles.primaryButtonText}>Message seller privately</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push({
+                    pathname: '/support',
+                    params: {
+                      reportedUserId: String(listing.user?.id),
+                      reportedUserName: listing.user?.name ?? listing.seller_name,
+                    },
+                  })}
+                  style={[styles.primaryButton, { backgroundColor: COLORS.paleNeutral }]}
+                >
+                  <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>Report this seller</Text>
+                </Pressable>
+              </>
             ) : null}
           </View>
         </ScrollView>

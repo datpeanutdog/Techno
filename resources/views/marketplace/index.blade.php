@@ -3,30 +3,6 @@
 @section('title', 'PASABUY — your campus marketplace')
 
 @section('content')
-    <section class="search-wrap" aria-label="Find a school listing">
-        <form class="search-form" method="GET" action="{{ route('marketplace.index') }}">
-            @if (request('mode')) <input type="hidden" name="mode" value="{{ request('mode') }}"> @endif
-            @if (request('category')) <input type="hidden" name="category" value="{{ request('category') }}"> @endif
-            @if (request('sort')) <input type="hidden" name="sort" value="{{ request('sort') }}"> @endif
-            <label class="search-field search-keyword">
-                <span class="search-icon" aria-hidden="true">⌕</span>
-                <span class="search-field-copy">
-                    <span class="field-label">What do you need for school?</span>
-                    <input type="search" name="q" value="{{ request('q') }}" placeholder="Try &quot;calculator&quot; or &quot;biology notes&quot;" aria-label="Search school listings">
-                </span>
-            </label>
-            <span class="search-divider" aria-hidden="true"></span>
-            <label class="search-field search-location">
-                <span class="search-icon location-icon" aria-hidden="true">⌖</span>
-                <span class="search-field-copy">
-                    <span class="field-label">Where's your campus?</span>
-                    <input type="text" name="location" value="{{ request('location') }}" placeholder="Campus or neighborhood" aria-label="Filter by campus or pickup location">
-                </span>
-            </label>
-            <button class="button button-gold search-button" type="submit"><span aria-hidden="true">⌕</span> Search</button>
-        </form>
-    </section>
-
     <section class="discover-section" id="discover">
         <div class="section-heading">
             <div>
@@ -36,26 +12,24 @@
             <p class="section-aside">The next student who needs it could be right around the corner.</p>
         </div>
 
-        <div class="category-list" aria-label="Browse school categories">
-            @php
-                $categoryIcons = [
-                    'Books & Notes' => '▤',
-                    'School Supplies' => '✎',
-                    'Tech & Calculators' => '▦',
-                    'Uniforms' => '♧',
-                    'Dorm Essentials' => '⌂',
-                    'Campus Services' => '✦',
-                ];
-            @endphp
-            <a class="category-pill {{ !request('category') ? 'category-selected' : '' }}" href="{{ route('marketplace.index', array_filter(['mode' => request('mode')])) }}#discover">
-                <span class="category-icon category-all">✦</span> Everything
-            </a>
-            @foreach ($categories as $category)
-                <a class="category-pill {{ request('category') === $category ? 'category-selected' : '' }}" href="{{ route('marketplace.index', array_filter(['mode' => request('mode'), 'category' => $category])) }}#discover">
-                    <span class="category-icon">{{ $categoryIcons[$category] }}</span> {{ $category }}
-                </a>
+        <form class="marketplace-filter-bar" method="GET" action="{{ route('marketplace.index') }}" aria-label="Search and filter campus listings">
+            @foreach (['mode', 'location', 'sort'] as $filter)
+                @if (request($filter)) <input type="hidden" name="{{ $filter }}" value="{{ request($filter) }}"> @endif
             @endforeach
-        </div>
+            <label class="marketplace-search">
+                <span class="marketplace-search-icon" aria-hidden="true">⌕</span>
+                <input type="search" name="q" value="{{ request('q') }}" placeholder="Search campus listings" aria-label="Search campus listings">
+            </label>
+            <label class="marketplace-category-filter">
+                <select name="category" aria-label="Filter by category">
+                    <option value="">All categories</option>
+                    @foreach ($categories as $category)
+                        <option value="{{ $category }}" @selected(request('category') === $category)>{{ $category }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <button class="button button-gold marketplace-search-submit" type="submit">Search</button>
+        </form>
 
         <div class="listings-heading">
             <div>
@@ -88,7 +62,12 @@
             <a class="market-sell-link" href="{{ route('listings.create') }}">List an item <span aria-hidden="true">＋</span></a>
         </nav>
 
-        @if (request()->hasAny(['q', 'location', 'mode', 'category']))
+        @if (
+            (request('q') !== null && request('q') !== '')
+            || (request('location') !== null && request('location') !== '')
+            || (request('mode') !== null && request('mode') !== '')
+            || (request('category') !== null && request('category') !== '')
+        )
             <div class="active-filters">
                 <span>Showing {{ $listings->total() }} {{ $listings->total() === 1 ? 'campus find' : 'campus finds' }}</span>
                 <a href="{{ route('marketplace.index') }}#discover">Clear filters <span aria-hidden="true">×</span></a>
@@ -102,7 +81,7 @@
                         <div class="listing-image-wrap">
                             <a class="listing-image-link" href="{{ route('listings.show', $listing) }}" aria-label="View {{ $listing->title }}">
                                 @if ($listing->image_url)
-                                    <img class="listing-image" src="{{ $listing->image_url }}" alt="{{ $listing->title }}" loading="lazy">
+                                    <img class="listing-image" src="{{ $listing->image_url }}" alt="{{ $listing->title }}" loading="lazy" referrerpolicy="no-referrer">
                                 @else
                                     <div class="listing-image listing-placeholder" aria-hidden="true">✦</div>
                                 @endif
@@ -119,9 +98,29 @@
                             </div>
                             <a class="listing-title" href="{{ route('listings.show', $listing) }}">{{ $listing->title }}</a>
                             <div class="listing-meta"><span aria-hidden="true">⌖</span> {{ $listing->location }}</div>
+                            @if ($listing->user)
+                                <a class="seller-profile-link" href="{{ route('sellers.show', $listing->user) }}">
+                                    {{ $listing->user->name }}
+                                    @if ($listing->user->received_reviews_count)
+                                        · ★ {{ number_format((float) $listing->user->received_reviews_avg_rating, 1) }}
+                                    @else
+                                        · View seller
+                                    @endif
+                                </a>
+                            @endif
                             <div class="listing-card-bottom">
                                 <p class="listing-price">₱{{ number_format((float) $listing->price, $listing->price == (int) $listing->price ? 0 : 2) }}@if ($listing->type === 'rent')<span> / {{ $listing->rent_period }}</span>@endif</p>
-                                <span class="seller-rating"><span aria-hidden="true">★</span> {{ number_format((float) $listing->seller_rating, 1) }}</span>
+                                <span class="seller-rating">
+                                    @if ($listing->user)
+                                        @if ($listing->user->received_reviews_count)
+                                            <span aria-hidden="true">★</span> {{ number_format((float) $listing->user->received_reviews_avg_rating, 1) }}
+                                        @else
+                                            New seller
+                                        @endif
+                                    @else
+                                        <span aria-hidden="true">★</span> {{ number_format((float) $listing->seller_rating, 1) }}
+                                    @endif
+                                </span>
                             </div>
                         </div>
                     </article>

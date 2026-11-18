@@ -8,7 +8,7 @@
         <div class="detail-layout">
             <div class="detail-image-wrap">
                 @if ($listing->image_url)
-                    <img class="detail-image" src="{{ $listing->image_url }}" alt="{{ $listing->title }}">
+                    <img class="detail-image" src="{{ $listing->image_url }}" alt="{{ $listing->title }}" referrerpolicy="no-referrer">
                 @else
                     <div class="detail-image listing-placeholder" aria-hidden="true">✦</div>
                 @endif
@@ -27,7 +27,20 @@
                 <p class="detail-description">{{ $listing->description }}</p>
                 <div class="seller-card">
                     <span class="seller-avatar">@if ($listing->user?->avatar_url)<img src="{{ $listing->user->avatar_url }}" alt="">@else{{ $listing->seller_initials }}@endif</span>
-                    <span class="seller-info"><strong>{{ $listing->user?->name ?? $listing->seller_name }}</strong><span>{{ $listing->user?->campus ?? 'On PASABUY' }} <span class="seller-rating"><span aria-hidden="true">★</span> {{ number_format((float) $listing->seller_rating, 1) }}</span></span></span>
+                    <span class="seller-info">
+                        @if ($listing->user)<a href="{{ route('sellers.show', $listing->user) }}"><strong>{{ $listing->user->name }}</strong></a>@else<strong>{{ $listing->seller_name }}</strong>@endif
+                        <span>{{ $listing->user?->campus ?? 'On PASABUY' }}
+                            <span class="seller-rating">
+                                @if ($listing->user?->received_reviews_count)
+                                    <span aria-hidden="true">★</span> {{ number_format((float) $listing->user->received_reviews_avg_rating, 1) }} · {{ $listing->user->received_reviews_count }} {{ \Illuminate\Support\Str::plural('review', $listing->user->received_reviews_count) }}
+                                @elseif ($listing->user)
+                                    No reviews yet
+                                @else
+                                    <span aria-hidden="true">★</span> {{ number_format((float) $listing->seller_rating, 1) }}
+                                @endif
+                            </span>
+                        </span>
+                    </span>
                     <span class="seller-verified" title="Community listing" aria-label="Community listing">✓</span>
                 </div>
                 @if ($listing->user?->bio)<p class="detail-description">{{ $listing->user->bio }}</p>@endif
@@ -54,6 +67,9 @@
                         @endif
                     @else
                         <a class="button button-navy message-seller-button" href="{{ route('listings.messages.create', $listing) }}">Log in to message the seller <span aria-hidden="true">→</span></a>
+                    @endauth
+                    @auth
+                        <a class="support-report-link" href="{{ route('support.reports.create', ['reported_user_id' => $listing->user_id]) }}">Report this account to support</a>
                     @endauth
                 @endif
                 <div class="detail-safety">

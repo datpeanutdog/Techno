@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -24,6 +25,7 @@ import {
   getAuthToken,
   requestJson,
 } from '../../src/lib/api';
+import { MenuButton } from '../../src/components/NavigationDrawer';
 
 function formatMessageDate(value: string): string {
   const date = new Date(value);
@@ -46,37 +48,114 @@ export default function ConversationScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [liveError, setLiveError] = useState('');
   const scrollView = useRef<ScrollViewInstance | null>(null);
 
-  const loadConversation = useCallback(async () => {
+  const loadConversation = useCallback(async (): Promise<boolean> => {
     setError('');
 
     try {
       if (!await getAuthToken()) {
         router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
-        return;
+        return false;
       }
 
       const result = await requestJson<ConversationThread>(`/conversations/${encodeURIComponent(id)}`);
-      setConversation(result.data);
+      setConversation((current) => {
+        if (!current) return result.data;
+
+        const currentLastId = current.messages[current.messages.length - 1]?.id ?? 0;
+        const fetchedLastId = result.data.messages[result.data.messages.length - 1]?.id ?? 0;
+
+        return fetchedLastId > currentLastId ? result.data : current;
+      });
+      setLiveError('');
+      return true;
     } catch (issue) {
       const detail = issue instanceof Error ? issue.message : 'This conversation could not be loaded.';
       if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
         await clearAuthToken();
         router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
-        return;
+        return false;
       }
       setError(detail);
+      return false;
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [id]);
 
+  const pollConversation = useCallback(async (): Promise<boolean> => {
+    try {
+      if (!await getAuthToken()) {
+        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        return false;
+      }
+
+      const result = await requestJson<ConversationThread>(`/conversations/${encodeURIComponent(id)}`);
+      setConversation((current) => {
+        if (!current) return result.data;
+
+        const currentLastId = current.messages[current.messages.length - 1]?.id ?? 0;
+        const newMessages = result.data.messages.filter((message) => message.id > currentLastId);
+
+        if (!newMessages.length) return current;
+
+        return {
+          ...result.data,
+          messages: [...current.messages, ...newMessages],
+        };
+      });
+      setLiveError('');
+      return true;
+    } catch (issue) {
+      const detail = issue instanceof Error ? issue.message : 'New messages could not be checked.';
+      if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
+        await clearAuthToken();
+        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        return false;
+      }
+      setLiveError(detail);
+      return false;
+    }
+  }, [id]);
+
   useFocusEffect(
     useCallback(() => {
-      void loadConversation();
-    }, [loadConversation]),
+      let isFocused = true;
+      let isForeground = AppState.currentState !== 'background' && AppState.currentState !== 'inactive';
+      let isRequestInFlight = false;
+      let hasLoadedConversation = false;
+
+      const refresh = async () => {
+        if (!isFocused || !isForeground || isRequestInFlight) return;
+
+        isRequestInFlight = true;
+        try {
+          if (hasLoadedConversation) {
+            await pollConversation();
+          } else {
+            hasLoadedConversation = await loadConversation();
+          }
+        } finally {
+          isRequestInFlight = false;
+        }
+      };
+
+      void refresh();
+      const interval = setInterval(() => void refresh(), 3000);
+      const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+        isForeground = nextState === 'active';
+        if (isForeground) void refresh();
+      });
+
+      return () => {
+        isFocused = false;
+        clearInterval(interval);
+        appStateSubscription.remove();
+      };
+    }, [loadConversation, pollConversation]),
   );
 
   const sendMessage = async () => {
@@ -93,9 +172,13 @@ export default function ConversationScreen() {
         method: 'POST',
         body: JSON.stringify({ body: messageBody }),
       });
-      setConversation((current) => current
-        ? { ...current, messages: [...current.messages, result.data] }
-        : current);
+      setConversation((current) => {
+        if (!current || current.messages.some((message) => message.id === result.data.id)) {
+          return current;
+        }
+
+        return { ...current, messages: [...current.messages, result.data] };
+      });
       setBody('');
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : 'Your message could not be sent.');
@@ -119,7 +202,7 @@ export default function ConversationScreen() {
           <Text numberOfLines={1} style={appStyles.headerRouteTitle}>
             {conversation?.other_participant.name ?? 'Conversation'}
           </Text>
-          <View style={appStyles.routeHeaderSpacer} />
+          <MenuButton />
         </View>
 
         {loading ? (
@@ -207,6 +290,7 @@ export default function ConversationScreen() {
               )}
             </ScrollView>
 
+            {liveError ? <Text style={appStyles.formError}>{`Live updates paused: ${liveError}`}</Text> : null}
             {error ? <Text style={appStyles.formError}>{error}</Text> : null}
             <View style={screenStyles.compose}>
               <TextInput
@@ -217,7 +301,7 @@ export default function ConversationScreen() {
                 onChangeText={setBody}
                 onSubmitEditing={() => void sendMessage()}
                 placeholder="Write a message..."
-                placeholderTextColor="#9699a4"
+                placeholderTextColor={COLORS.muted}
                 style={screenStyles.composeInput}
                 value={body}
               />
@@ -280,7 +364,7 @@ const screenStyles = StyleSheet.create({
   messageBody: { color: COLORS.ink, fontSize: 13, lineHeight: 19 },
   ownMessageBody: { color: COLORS.white },
   messageDate: { alignSelf: 'flex-end', marginTop: 4, color: COLORS.muted, fontSize: 9 },
-  ownMessageDate: { color: '#d3d2e0' },
+  ownMessageDate: { color: '#e5d6c8' },
   compose: {
     flexDirection: 'row',
     alignItems: 'flex-end',

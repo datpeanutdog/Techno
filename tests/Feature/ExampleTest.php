@@ -14,6 +14,6 @@ class ExampleTest extends TestCase
      */
     public function test_the_application_returns_a_successful_response(): void
     {
-        $this->get('/')->assertOk()->assertSee('What do you need for school?');
+        $this->get('/')->assertOk()->assertSee('Search campus listings');
     }
 }

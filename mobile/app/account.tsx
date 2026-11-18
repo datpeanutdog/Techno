@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
@@ -23,11 +24,16 @@ import {
   saveAuthToken,
   UserProfile,
 } from '../src/lib/api';
+import { MenuButton } from '../src/components/NavigationDrawer';
 
 type AccountMode = 'login' | 'register' | 'forgot';
 
+function getExternalAvatarUrl(avatarUrl: string | null): string {
+  return avatarUrl && /^https:\/\//i.test(avatarUrl) ? avatarUrl : '';
+}
+
 export default function AccountScreen() {
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const { returnTo, listingSlug } = useLocalSearchParams<{ returnTo?: string; listingSlug?: string }>();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [mode, setMode] = useState<AccountMode>('login');
@@ -60,6 +66,7 @@ export default function AccountScreen() {
       email.current = profile.data.email;
       bio.current = profile.data.bio ?? '';
       campus.current = profile.data.campus ?? '';
+      avatarUrl.current = getExternalAvatarUrl(profile.data.avatar_url);
       setListings(mine.data);
     } catch (issue) {
       const detail = issue instanceof Error ? issue.message : 'Your account could not be loaded.';
@@ -116,8 +123,12 @@ export default function AccountScreen() {
       await loadAccount();
       if (returnTo === 'sell') {
         router.replace('/sell');
+      } else if (returnTo === 'support') {
+        router.replace('/support');
       } else if (returnTo === 'messages') {
         router.replace('/messages');
+      } else if (returnTo === 'message' && typeof listingSlug === 'string') {
+        router.replace({ pathname: '/messages/new', params: { listingSlug } });
       } else {
         router.replace('/');
       }
@@ -133,7 +144,7 @@ export default function AccountScreen() {
     email.current = profile.email;
     bio.current = profile.bio ?? '';
     campus.current = profile.campus ?? '';
-    avatarUrl.current = profile.avatar_url ?? '';
+    avatarUrl.current = getExternalAvatarUrl(profile.avatar_url);
   };
 
   const saveProfile = async () => {
@@ -152,10 +163,21 @@ export default function AccountScreen() {
         if (Platform.OS === 'web' && avatar.file) {
           form.append('avatar', avatar.file);
         } else {
+          const resizeScale = Math.min(1, 512 / avatar.width, 512 / avatar.height);
+          const resizedImage = await ImageManipulator.manipulate(avatar.uri)
+            .resize({
+              width: Math.max(1, Math.round(avatar.width * resizeScale)),
+              height: Math.max(1, Math.round(avatar.height * resizeScale)),
+            })
+            .renderAsync();
+          const uploadImage = await resizedImage.saveAsync({
+            compress: 0.75,
+            format: SaveFormat.JPEG,
+          });
           const file = {
-            uri: avatar.uri,
-            name: avatar.fileName ?? 'profile-photo.jpg',
-            type: avatar.mimeType ?? 'image/jpeg',
+            uri: uploadImage.uri,
+            name: 'profile-photo.jpg',
+            type: 'image/jpeg',
           };
           form.append('avatar', file as unknown as Blob);
         }
@@ -163,7 +185,7 @@ export default function AccountScreen() {
       const result = await requestJson<UserProfile>('/auth/profile', {
         method: 'POST',
         body: form,
-      });
+      }, avatar ? 90_000 : undefined);
       setUser(result.data);
       setAvatar(null);
       setNameFromProfile(result.data);
@@ -248,18 +270,21 @@ export default function AccountScreen() {
                 <Text style={styles.backButtonText}>‹  Back</Text>
               </Pressable>
               <Text style={styles.headerRouteTitle}>Your account</Text>
-              <View style={styles.routeHeaderSpacer} />
+              <MenuButton />
             </>
           ) : (
-            <View style={styles.brand}>
-              <View style={styles.brandIcon}>
-                <Text style={styles.brandIconText}>✓</Text>
+            <>
+              <View style={styles.brand}>
+                <View style={styles.brandIcon}>
+                  <Text style={styles.brandIconText}>✓</Text>
+                </View>
+                <View>
+                  <Text style={styles.brandName}>pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
+                  <Text style={styles.brandCaption}>YOUR CAMPUS MARKETPLACE</Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.brandName}>pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
-                <Text style={styles.brandCaption}>YOUR CAMPUS MARKETPLACE</Text>
-              </View>
-            </View>
+              <MenuButton />
+            </>
           )}
         </View>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.contentArea}>
@@ -271,6 +296,7 @@ export default function AccountScreen() {
                 <View style={styles.formCard}>
                   <Text style={styles.formHeading}>Your student profile</Text>
                   <Text style={styles.formSubheading}>Manage your profile and campus listings.</Text>
+                  <Text style={styles.formSubheading}>Account ID: {user.account_identifier}</Text>
                   <Pressable accessibilityRole="button" onPress={() => void pickAvatar()} style={{ alignSelf: 'flex-start', marginVertical: 16 }}>
                     {avatar ? (
                       <Image source={{ uri: avatar.uri }} style={{ width: 76, height: 76, borderRadius: 38 }} />
@@ -292,15 +318,23 @@ export default function AccountScreen() {
                   <Text style={styles.fieldLabel}>Short bio</Text>
                   <TextInput defaultValue={user.bio ?? ''} maxLength={500} multiline onChangeText={(value) => { bio.current = value; }} placeholder="A little about you" style={[styles.formInput, styles.multilineInput]} />
                   <Text style={styles.fieldLabel}>Or photo link</Text>
-                  <TextInput autoCapitalize="none" defaultValue={user.avatar_url ?? ''} keyboardType="url" onChangeText={(value) => { avatarUrl.current = value; }} placeholder="https://..." style={styles.formInput} />
+                  <TextInput autoCapitalize="none" defaultValue={getExternalAvatarUrl(user.avatar_url)} keyboardType="url" onChangeText={(value) => { avatarUrl.current = value; }} placeholder="https://..." style={styles.formInput} />
                   <Pressable disabled={busy} onPress={() => void saveProfile()} style={styles.primaryButton}>
                     <Text style={styles.primaryButtonText}>{busy ? 'Saving…' : 'Save profile'}</Text>
                   </Pressable>
                   <Pressable disabled={busy} onPress={() => router.replace('/')} style={[styles.primaryButton, { marginTop: 10 }]}>
                     <Text style={styles.primaryButtonText}>Continue to campus hub</Text>
                   </Pressable>
-                  <Pressable disabled={busy} onPress={() => void logout()} style={[styles.primaryButton, { marginTop: 10, backgroundColor: COLORS.paleBlue }]}>
+                  <Pressable disabled={busy} onPress={() => void logout()} style={[styles.primaryButton, { marginTop: 10, backgroundColor: COLORS.paleNeutral }]}>
                     <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>Log out</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.formCard}>
+                  <Text style={styles.formHeading}>Customer service</Text>
+                  <Text style={styles.formSubheading}>Report inappropriate behavior or a scam and follow the review status.</Text>
+                  <Pressable disabled={busy} onPress={() => router.push('/support')} style={[styles.primaryButton, { marginTop: 16 }]}>
+                    <Text style={styles.primaryButtonText}>Contact customer support</Text>
                   </Pressable>
                 </View>
 

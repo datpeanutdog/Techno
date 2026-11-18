@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
@@ -24,22 +24,23 @@ import {
   requestJson,
   UserProfile,
 } from './src/lib/api';
+import { MenuButton } from './src/components/NavigationDrawer';
 
 type Tab = 'buy' | 'rent' | 'saved';
 
 export const COLORS = {
-  navy: '#202348',
-  navyDeep: '#171a39',
-  gold: '#e9aa31',
-  goldDark: '#92630d',
-  cream: '#fcfaf5',
-  white: '#fffefa',
-  ink: '#292c43',
-  muted: '#777d8c',
-  line: '#e9e7df',
+  navy: '#4a382c',
+  navyDeep: '#33251d',
+  gold: '#dfa13b',
+  goldDark: '#845b2b',
+  cream: '#f4ede2',
+  white: '#fffdf8',
+  ink: '#3e3027',
+  muted: '#7f7468',
+  line: '#e7ddcf',
   green: '#496d58',
   paleGold: '#f5efdf',
-  paleBlue: '#e9ebf3',
+  paleNeutral: '#efe5d8',
 };
 
 export const CATEGORY_ICONS: Record<string, string> = {
@@ -139,7 +140,13 @@ function ListingCard({
               <Text style={styles.pricePeriod}> / {listing.rent_period}</Text>
             ) : null}
           </Text>
-          <Text style={styles.rating}>★ {Number(listing.seller_rating).toFixed(1)}</Text>
+          <Text style={styles.rating}>
+            {listing.user
+              ? listing.user.received_reviews_count
+                ? `★ ${Number(listing.user.received_reviews_avg_rating).toFixed(1)}`
+                : 'New seller'
+              : `★ ${Number(listing.seller_rating).toFixed(1)}`}
+          </Text>
         </View>
       </Pressable>
     </View>
@@ -159,6 +166,7 @@ export default function App() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categoryFilterOpen, setCategoryFilterOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<number[]>([]);
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('');
@@ -166,6 +174,16 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    if (routerView === 'saved') {
+      setTab('saved');
+    } else if (routerMode === 'rent') {
+      setTab('rent');
+    } else if (routerMode === 'sale' || routerMode === 'buy') {
+      setTab('buy');
+    }
+  }, [routerMode, routerView]);
 
   useFocusEffect(
     useCallback(() => {
@@ -260,6 +278,7 @@ export default function App() {
 
   const changeTab = (nextTab: Tab) => {
     setNotice('');
+    setCategoryFilterOpen(false);
     if (nextTab !== tab) setLoading(true);
     setTab(nextTab);
   };
@@ -286,23 +305,65 @@ export default function App() {
     <>
       {tab !== 'saved' ? (
         <>
-          <View style={styles.searchBox}>
-            <Text style={styles.searchGlyph}>⌕</Text>
-            <TextInput
-              accessibilityLabel="Search school listings"
-              onChangeText={setQuery}
-              placeholder="Books, calculators, supplies..."
-              placeholderTextColor="#9699a4"
-              returnKeyType="search"
-              style={styles.searchInput}
-              value={query}
-            />
-            {query ? (
-              <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')}>
-                <Text style={styles.clearSearch}>×</Text>
-              </Pressable>
-            ) : null}
+          <View style={styles.searchFiltersRow}>
+            <View style={[styles.searchBox, styles.searchBoxCompact]}>
+              <Text style={styles.searchGlyph}>⌕</Text>
+              <TextInput
+                accessibilityLabel="Search school listings"
+                onChangeText={setQuery}
+                placeholder="Search campus listings"
+                placeholderTextColor={COLORS.muted}
+                returnKeyType="search"
+                style={styles.searchInput}
+                value={query}
+              />
+              {query ? (
+                <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')}>
+                  <Text style={styles.clearSearch}>×</Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            <Pressable
+              accessibilityLabel={selectedCategory ? `Filter by category: ${selectedCategory}` : 'Filter by category'}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: categoryFilterOpen }}
+              onPress={() => setCategoryFilterOpen((open) => !open)}
+              style={styles.categoryFilterButton}
+            >
+              <View style={styles.categoryFilterCopy}>
+                <Text style={styles.categoryFilterLabel}>CATEGORY</Text>
+                <Text numberOfLines={1} style={styles.categoryFilterValue}>
+                  {selectedCategory ?? 'All categories'}
+                </Text>
+              </View>
+              <Text style={styles.categoryFilterChevron}>{categoryFilterOpen ? '⌃' : '⌄'}</Text>
+            </Pressable>
           </View>
+
+          {categoryFilterOpen ? (
+            <ScrollView contentContainerStyle={styles.categoryRow} horizontal showsHorizontalScrollIndicator={false}>
+              <ChoiceChip
+                label="Everything"
+                selected={selectedCategory === null}
+                onPress={() => {
+                  setSelectedCategory(null);
+                  setCategoryFilterOpen(false);
+                }}
+              />
+              {categories.map((category) => (
+                <ChoiceChip
+                  key={category}
+                  label={`${CATEGORY_ICONS[category] ?? '✦'}  ${category}`}
+                  selected={selectedCategory === category}
+                  onPress={() => {
+                    setSelectedCategory(category);
+                    setCategoryFilterOpen(false);
+                  }}
+                />
+              ))}
+            </ScrollView>
+          ) : null}
 
           <View style={[styles.searchBox, styles.locationBox]}>
             <Text style={styles.locationGlyph}>⌖</Text>
@@ -310,7 +371,7 @@ export default function App() {
               accessibilityLabel="Filter by campus"
               onChangeText={setLocation}
               placeholder="Campus or pickup area"
-              placeholderTextColor="#9699a4"
+              placeholderTextColor={COLORS.muted}
               returnKeyType="search"
               style={styles.searchInput}
               value={location}
@@ -450,20 +511,7 @@ export default function App() {
           </View>
         </Pressable>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pressable
-            accessibilityLabel="Open your messages"
-            onPress={() => router.push('/messages')}
-            style={[styles.headerAddButton, { backgroundColor: COLORS.paleBlue }]}
-          >
-            <Text style={[styles.headerAddText, { color: COLORS.navy, fontSize: 17 }]}>✉</Text>
-          </Pressable>
-          <Pressable
-            accessibilityLabel="Open your account"
-            onPress={() => router.push('/account')}
-            style={[styles.headerAddButton, { backgroundColor: COLORS.navy }]}
-          >
-            <Text style={[styles.headerAddText, { color: COLORS.white, fontSize: 17 }]}>☺</Text>
-          </Pressable>
+          <MenuButton />
           <Pressable
             accessibilityLabel="List a school item"
             onPress={() => router.push('/sell')}
@@ -575,22 +623,22 @@ export const styles = StyleSheet.create({
   contentArea: { flex: 1 },
   topBar: { height: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 17, backgroundColor: COLORS.navyDeep },
   topBarText: { color: '#f4e7c8', fontSize: 8, fontWeight: '700', letterSpacing: 0.9 },
-  topBarLocation: { color: '#d3d2e0', fontSize: 7, fontWeight: '600', letterSpacing: 0.7 },
+  topBarLocation: { color: '#e5d6c8', fontSize: 7, fontWeight: '600', letterSpacing: 0.7 },
   header: { height: 68, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.white },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   brandIcon: { width: 35, height: 35, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: COLORS.navy },
   brandIconText: { color: COLORS.gold, fontSize: 20, fontWeight: '800' },
   brandName: { color: COLORS.navy, fontSize: 21, fontWeight: '800', letterSpacing: -1.3 },
   brandNameAccent: { color: COLORS.goldDark },
-  brandCaption: { marginTop: 1, color: '#7b7f90', fontSize: 7, fontWeight: '700', letterSpacing: 1 },
+  brandCaption: { marginTop: 1, color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 1 },
   headerAddButton: { width: 37, height: 37, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: COLORS.gold },
   headerAddText: { color: COLORS.navy, fontSize: 23, fontWeight: '400', lineHeight: 27 },
   modeTabs: { minHeight: 60, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 17, backgroundColor: COLORS.cream },
   modeTab: { minWidth: 65, minHeight: 38, alignItems: 'center', justifyContent: 'center', marginRight: 7, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
-  modeTabActive: { borderColor: '#d8c99e', backgroundColor: COLORS.paleGold, elevation: 2, shadowColor: COLORS.navy, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  modeTabText: { color: '#7e8290', fontSize: 12, fontWeight: '600' },
+  modeTabActive: { borderWidth: 2, borderColor: '#c99a38', backgroundColor: COLORS.paleGold, elevation: 2, shadowColor: COLORS.navy, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  modeTabText: { color: COLORS.muted, fontSize: 12, fontWeight: '600' },
   modeTabTextActive: { color: COLORS.navy, fontWeight: '800' },
-  modeTabTag: { marginLeft: 'auto', alignSelf: 'center', color: '#8a8b94', fontSize: 7, fontWeight: '700', letterSpacing: 0.9 },
+  modeTabTag: { marginLeft: 'auto', alignSelf: 'center', color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 0.9 },
   pageHeading: { paddingHorizontal: 20, paddingTop: 17, paddingBottom: 12 },
   pageTitle: { color: COLORS.navy, fontSize: 19, fontWeight: '700', letterSpacing: -0.5 },
   pageSubtitle: { marginTop: 4, color: COLORS.muted, fontSize: 10 },
@@ -598,19 +646,26 @@ export const styles = StyleSheet.create({
   routeHeaderSpacer: { width: 52 },
   pageScroll: { flex: 1 },
   mainScrollContent: { flexGrow: 1, paddingBottom: 10 },
+  searchFiltersRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 17 },
   searchBox: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 17, paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.line, borderRadius: 11, backgroundColor: COLORS.white },
+  searchBoxCompact: { flex: 1, marginHorizontal: 0, paddingHorizontal: 10 },
   locationBox: { minHeight: 40, marginTop: 8 },
   searchGlyph: { color: COLORS.goldDark, fontSize: 24, lineHeight: 28 },
-  locationGlyph: { color: '#78819a', fontSize: 20 },
+  locationGlyph: { color: COLORS.muted, fontSize: 20 },
   searchInput: { flex: 1, paddingVertical: 8, color: COLORS.ink, fontSize: 11 },
   clearSearch: { paddingHorizontal: 4, color: COLORS.muted, fontSize: 20 },
+  categoryFilterButton: { width: '42%', minHeight: 45, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: COLORS.line, borderRadius: 11, backgroundColor: COLORS.white },
+  categoryFilterCopy: { flex: 1, minWidth: 0 },
+  categoryFilterLabel: { color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 0.6 },
+  categoryFilterValue: { marginTop: 2, color: COLORS.navy, fontSize: 10, fontWeight: '600' },
+  categoryFilterChevron: { color: COLORS.goldDark, fontSize: 18 },
   categoryRow: { gap: 7, paddingHorizontal: 17, paddingVertical: 12 },
-  choiceChip: { minHeight: 32, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.line, borderRadius: 18, backgroundColor: COLORS.white },
-  choiceChipSelected: { borderColor: '#c4ae7b', backgroundColor: COLORS.paleGold },
-  choiceChipText: { color: '#666c7d', fontSize: 9, fontWeight: '600' },
+  choiceChip: { minHeight: 34, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.line, borderRadius: 18, backgroundColor: COLORS.white },
+  choiceChipSelected: { borderWidth: 2, borderColor: '#c99a38', backgroundColor: COLORS.paleGold },
+  choiceChipText: { color: COLORS.muted, fontSize: 9, fontWeight: '600' },
   choiceChipTextSelected: { color: COLORS.navy, fontWeight: '700' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 18, marginTop: 4, marginBottom: 10 },
-  sectionEyebrow: { color: '#878b97', fontSize: 7, fontWeight: '700', letterSpacing: 1.15 },
+  sectionEyebrow: { color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 1.15 },
   sectionTitle: { marginTop: 3, color: COLORS.navy, fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
   refreshButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
   refreshIcon: { color: COLORS.navy, fontSize: 20 },
@@ -620,28 +675,28 @@ export const styles = StyleSheet.create({
   listingRow: { flexDirection: 'row', gap: 11, marginBottom: 11 },
   listingCard: { flex: 1, minWidth: 0, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, borderRadius: 11, backgroundColor: COLORS.white },
   cardSpacer: { flex: 1 },
-  cardImageWrap: { height: 136, overflow: 'hidden', backgroundColor: '#efede6' },
+  cardImageWrap: { height: 136, overflow: 'hidden', backgroundColor: COLORS.paleNeutral },
   cardImage: { width: '100%', height: '100%', objectFit: 'cover' },
   cardImagePlaceholder: { width: '100%', height: '100%' },
   imagePlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f2eddf' },
   placeholderIcon: { color: COLORS.goldDark, fontSize: 36 },
-  typeBadge: { position: 'absolute', top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 5, borderRadius: 5, backgroundColor: '#faf0d9' },
+  typeBadge: { position: 'absolute', top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 5, borderRadius: 5, backgroundColor: COLORS.paleGold },
   typeBadgeText: { color: '#77570f', fontSize: 7, fontWeight: '800', letterSpacing: 0.4 },
-  rentBadge: { backgroundColor: COLORS.paleBlue },
+  rentBadge: { backgroundColor: COLORS.paleNeutral },
   rentBadgeText: { color: COLORS.navy },
-  favoriteButton: { position: 'absolute', top: 7, right: 7, width: 29, height: 29, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: '#fffefaed' },
-  favoriteIcon: { color: '#5d6272', fontSize: 18, lineHeight: 21 },
+  favoriteButton: { position: 'absolute', top: 7, right: 7, width: 29, height: 29, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: '#fffdf8ed' },
+  favoriteIcon: { color: COLORS.muted, fontSize: 18, lineHeight: 21 },
   favoriteIconSaved: { color: '#c9595f' },
   cardContent: { paddingHorizontal: 9, paddingTop: 9, paddingBottom: 9 },
   cardMetaRow: { minHeight: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
-  cardCategory: { flex: 1, color: '#727789', fontSize: 7, fontWeight: '700', letterSpacing: 0.4 },
-  cardCondition: { color: '#999ca5', fontSize: 7 },
-  cardTitle: { minHeight: 31, marginTop: 5, color: '#34374e', fontSize: 11, fontWeight: '700', lineHeight: 15 },
-  cardLocation: { marginTop: 4, color: '#858a97', fontSize: 8 },
-  cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5, marginTop: 9, paddingTop: 7, borderTopWidth: 1, borderTopColor: '#f0eee8' },
+  cardCategory: { flex: 1, color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 0.4 },
+  cardCondition: { color: COLORS.muted, fontSize: 7 },
+  cardTitle: { minHeight: 31, marginTop: 5, color: COLORS.ink, fontSize: 11, fontWeight: '700', lineHeight: 15 },
+  cardLocation: { marginTop: 4, color: COLORS.muted, fontSize: 8 },
+  cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5, marginTop: 9, paddingTop: 7, borderTopWidth: 1, borderTopColor: COLORS.line },
   cardPrice: { flexShrink: 1, color: COLORS.navy, fontSize: 12, fontWeight: '800' },
-  pricePeriod: { color: '#858a97', fontSize: 8, fontWeight: '400' },
-  rating: { color: '#797d88', fontSize: 8 },
+  pricePeriod: { color: COLORS.muted, fontSize: 8, fontWeight: '400' },
+  rating: { color: COLORS.muted, fontSize: 8 },
   loadingState: { alignItems: 'center', gap: 9, paddingVertical: 48 },
   helperText: { color: COLORS.muted, fontSize: 10 },
   emptyState: { alignItems: 'center', paddingHorizontal: 30, paddingVertical: 43 },
@@ -654,17 +709,17 @@ export const styles = StyleSheet.create({
   detailContent: { paddingHorizontal: 17, paddingBottom: 22 },
   backButton: { alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 5 },
   backButtonText: { color: COLORS.goldDark, fontSize: 10, fontWeight: '600' },
-  detailImage: { width: '100%', height: 255, borderRadius: 12, backgroundColor: '#efede6', objectFit: 'cover' },
+  detailImage: { width: '100%', height: 255, borderRadius: 12, backgroundColor: COLORS.paleNeutral, objectFit: 'cover' },
   detailPanel: { paddingTop: 15 },
   detailTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  detailCategory: { color: '#727789', fontSize: 8, fontWeight: '700', letterSpacing: 0.7 },
+  detailCategory: { color: COLORS.muted, fontSize: 8, fontWeight: '700', letterSpacing: 0.7 },
   detailRentLabel: { color: COLORS.navy },
   detailTitle: { marginTop: 8, color: COLORS.navy, fontSize: 22, fontWeight: '700', letterSpacing: -0.7 },
   detailPrice: { marginTop: 6, color: COLORS.goldDark, fontSize: 21, fontWeight: '800' },
-  detailLocation: { marginTop: 6, color: '#838895', fontSize: 10 },
+  detailLocation: { marginTop: 6, color: COLORS.muted, fontSize: 10 },
   divider: { height: 1, marginVertical: 15, backgroundColor: COLORS.line },
   detailHeading: { color: COLORS.ink, fontSize: 12, fontWeight: '700' },
-  detailDescription: { marginTop: 7, color: '#707687', fontSize: 11, lineHeight: 18 },
+  detailDescription: { marginTop: 7, color: COLORS.muted, fontSize: 11, lineHeight: 18 },
   conditionPill: { alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 14, backgroundColor: COLORS.paleGold, color: '#725516', fontSize: 9, fontWeight: '600' },
   sellerCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 17, padding: 11, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
   sellerAvatar: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: COLORS.paleGold },
@@ -673,10 +728,10 @@ export const styles = StyleSheet.create({
   sellerCopy: { flex: 1 },
   sellerName: { color: COLORS.ink, fontSize: 11, fontWeight: '700' },
   sellerSubline: { marginTop: 3, color: COLORS.muted, fontSize: 8 },
-  detailHeart: { color: '#636879', fontSize: 23 },
-  safetyNote: { flexDirection: 'row', gap: 9, marginTop: 11, padding: 11, borderRadius: 9, backgroundColor: '#f5f2e9' },
+  detailHeart: { color: COLORS.muted, fontSize: 23 },
+  safetyNote: { flexDirection: 'row', gap: 9, marginTop: 11, padding: 11, borderRadius: 9, backgroundColor: COLORS.paleGold },
   safetyIcon: { color: COLORS.goldDark, fontSize: 14 },
-  safetyText: { flex: 1, color: '#727887', fontSize: 9, lineHeight: 15 },
+  safetyText: { flex: 1, color: COLORS.muted, fontSize: 9, lineHeight: 15 },
   sellContent: { paddingHorizontal: 17, paddingBottom: 25 },
   sellIntro: { paddingVertical: 7 },
   sellSparkle: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: COLORS.paleGold },
@@ -688,14 +743,14 @@ export const styles = StyleSheet.create({
   formCard: { marginTop: 13, padding: 15, borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, backgroundColor: COLORS.white },
   formHeading: { color: COLORS.navy, fontSize: 15, fontWeight: '700' },
   formSubheading: { marginTop: 4, color: COLORS.muted, fontSize: 9 },
-  fieldLabel: { marginTop: 13, marginBottom: 6, color: '#4f5466', fontSize: 9, fontWeight: '700' },
+  fieldLabel: { marginTop: 13, marginBottom: 6, color: COLORS.navy, fontSize: 9, fontWeight: '700' },
   required: { color: COLORS.goldDark },
-  formInput: { minHeight: 41, paddingHorizontal: 10, paddingVertical: 9, borderWidth: 1, borderColor: COLORS.line, borderRadius: 7, backgroundColor: '#fffefa', color: COLORS.ink, fontSize: 10 },
+  formInput: { minHeight: 41, paddingHorizontal: 10, paddingVertical: 9, borderWidth: 1, borderColor: COLORS.line, borderRadius: 7, backgroundColor: COLORS.white, color: COLORS.ink, fontSize: 10 },
   multilineInput: { minHeight: 78 },
   segmentRow: { flexDirection: 'row', gap: 8 },
   formRow: { flexDirection: 'row', gap: 10 },
   formHalf: { flex: 1, minWidth: 0 },
-  priceInput: { minHeight: 41, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, borderWidth: 1, borderColor: COLORS.line, borderRadius: 7, backgroundColor: '#fffefa' },
+  priceInput: { minHeight: 41, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, borderWidth: 1, borderColor: COLORS.line, borderRadius: 7, backgroundColor: COLORS.white },
   currencySign: { color: COLORS.goldDark, fontSize: 12 },
   priceField: { flex: 1, paddingVertical: 8, color: COLORS.ink, fontSize: 10 },
   periodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
@@ -703,16 +758,16 @@ export const styles = StyleSheet.create({
   formCategoryRow: { flexDirection: 'row', gap: 6, paddingRight: 15 },
   formError: { marginTop: 10, color: '#a34d3f', fontSize: 9, lineHeight: 14 },
   postButton: { marginTop: 21 },
-  formFinePrint: { marginTop: 9, color: '#888d99', fontSize: 8, textAlign: 'center' },
+  formFinePrint: { marginTop: 9, color: COLORS.muted, fontSize: 8, textAlign: 'center' },
   bottomBar: { minHeight: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: COLORS.cream },
   bottomTab: { flex: 1, minWidth: 0, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, backgroundColor: COLORS.white },
-  bottomTabActive: { borderColor: '#d8c99e', backgroundColor: COLORS.paleGold },
+  bottomTabActive: { borderWidth: 2, borderColor: '#c99a38', backgroundColor: COLORS.paleGold },
   bottomTabSell: { borderColor: COLORS.gold, backgroundColor: COLORS.gold },
   tabPressed: { opacity: 0.78, transform: [{ scale: 0.97 }] },
-  bottomIcon: { color: '#858a97', fontSize: 19, lineHeight: 23 },
+  bottomIcon: { color: COLORS.muted, fontSize: 19, lineHeight: 23 },
   bottomIconActive: { color: COLORS.navy },
   bottomIconSell: { color: COLORS.navy },
-  bottomLabel: { color: '#858a97', fontSize: 8, fontWeight: '600' },
+  bottomLabel: { color: COLORS.muted, fontSize: 8, fontWeight: '600' },
   bottomLabelActive: { color: COLORS.navy, fontWeight: '700' },
   bottomLabelSell: { color: COLORS.navy, fontWeight: '700' },
 });

@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -37,6 +36,50 @@ class User extends Authenticatable
         return $this->hasMany(Conversation::class, 'seller_id');
     }
 
+    public function receivedReviews(): HasMany
+    {
+        return $this->hasMany(SellerReview::class, 'seller_id');
+    }
+
+    public function writtenReviews(): HasMany
+    {
+        return $this->hasMany(SellerReview::class, 'reviewer_id');
+    }
+
+    public function supportReportsFiled(): HasMany
+    {
+        return $this->hasMany(SupportReport::class, 'reporter_id');
+    }
+
+    public function supportReportsReceived(): HasMany
+    {
+        return $this->hasMany(SupportReport::class, 'reported_user_id');
+    }
+
+    public function suspensionAppeals(): HasMany
+    {
+        return $this->hasMany(SuspensionAppeal::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return in_array(
+            Str::lower($this->email),
+            config('app.admin_emails', []),
+            true,
+        );
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
+    }
+
+    public function getAccountIdentifierAttribute(): string
+    {
+        return 'ACC-'.str_pad((string) $this->getKey(), 6, '0', STR_PAD_LEFT);
+    }
+
     public function getAvatarUrlAttribute(): ?string
     {
         if (! $this->avatar_path) {
@@ -45,7 +88,7 @@ class User extends Authenticatable
 
         return Str::startsWith($this->avatar_path, ['http://', 'https://'])
             ? $this->avatar_path
-            : request()->getSchemeAndHttpHost().Storage::disk('public')->url($this->avatar_path);
+            : request()->getSchemeAndHttpHost().'/storage/'.ltrim($this->avatar_path, '/');
     }
 
     /**
@@ -58,6 +101,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'suspended_at' => 'datetime',
         ];
     }
 }

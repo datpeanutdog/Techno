@@ -19,8 +19,9 @@ class MarketplaceTest extends TestCase
 
         $response->assertOk()
             ->assertDontSee('School days,')
-            ->assertSee('What do you need for school?')
-            ->assertSee('Campus or neighborhood')
+            ->assertSee('Search campus listings')
+            ->assertSee('Filter by category')
+            ->assertSee('All categories')
             ->assertSee('Search')
             ->assertSee('Engineering calculus book set')
             ->assertSee('Laptop for classes & projects')
@@ -31,7 +32,7 @@ class MarketplaceTest extends TestCase
             ->assertSee('>Buy<', false)
             ->assertSee('Find something to keep')
             ->assertSee('Borrow it for a while')
-            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Buy</a>'], false);
+            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Buy</span>'], false);
     }
 
     public function test_sell_navigation_opens_listing_form_and_marks_sell_as_active(): void
@@ -39,7 +40,8 @@ class MarketplaceTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('listings.create'))
             ->assertOk()
             ->assertSee('Post campus listing')
-            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Sell</a>'], false);
+            ->assertSee('<option value="hour"', false)
+            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Sell</span>'], false);
     }
 
     public function test_search_filters_listings_by_keyword_and_location(): void
@@ -125,21 +127,25 @@ class MarketplaceTest extends TestCase
     public function test_signed_in_user_can_create_a_rental_listing_with_a_period(): void
     {
         $response = $this->actingAs(User::factory()->create(['name' => 'Jamie Lee']))->post(route('listings.store'), [
-            'title' => 'A lab coat ready to rent',
-            'description' => 'A clean lab coat for science class.',
+            'title' => 'A calculator ready to rent',
+            'description' => 'A scientific calculator for an afternoon exam.',
             'price' => 90,
             'type' => 'rent',
-            'rent_period' => 'week',
-            'category' => 'Uniforms',
-            'location' => 'Science building',
+            'rent_period' => 'hour',
+            'category' => 'Tech & Calculators',
+            'location' => 'Campus library',
         ]);
 
         $response->assertRedirect();
         $this->assertDatabaseHas('listings', [
-            'title' => 'A lab coat ready to rent',
+            'title' => 'A calculator ready to rent',
             'type' => 'rent',
-            'rent_period' => 'week',
+            'rent_period' => 'hour',
         ]);
+        $this->actingAs(User::factory()->create())
+            ->get(route('listings.show', Listing::where('title', 'A calculator ready to rent')->firstOrFail()))
+            ->assertOk()
+            ->assertSee('/ hour');
     }
 
     public function test_rental_listing_requires_a_rental_period(): void
@@ -171,10 +177,10 @@ class MarketplaceTest extends TestCase
         $user = User::factory()->create();
 
         $this->get('/')->assertOk()
-            ->assertSee('What do you need for school?')
+            ->assertSee('Search campus listings')
             ->assertSee('Join PASABUY');
         $this->get('/?mode=rent')->assertOk()->assertSee('Scientific calculator for exams');
-        $this->actingAs($user)->get('/')->assertOk()->assertSee('What do you need for school?');
+        $this->actingAs($user)->get('/')->assertOk()->assertSee('Search campus listings');
         $this->post('/logout')->assertRedirect(route('marketplace.index'));
     }
 

@@ -59,24 +59,75 @@ class MarketplaceApiTest extends TestCase
     {
         $user = User::factory()->create(['name' => 'Jamie Lee']);
         $this->actingAs($user, 'sanctum')->postJson('/api/listings', [
-            'title' => 'Lab coat for biology class',
-            'description' => 'Clean lab coat, size medium.',
+            'title' => 'Calculator for an exam',
+            'description' => 'Scientific calculator available by the hour.',
             'price' => 90,
             'type' => 'rent',
-            'rent_period' => 'week',
-            'category' => 'Uniforms',
-            'location' => 'Science building',
+            'rent_period' => 'hour',
+            'category' => 'Tech & Calculators',
+            'location' => 'Campus library',
             'seller_name' => 'Untrusted seller name',
         ])->assertCreated()
             ->assertJsonPath('data.type', 'rent')
-            ->assertJsonPath('data.rent_period', 'week');
+            ->assertJsonPath('data.rent_period', 'hour');
 
         $this->assertDatabaseHas('listings', [
-            'title' => 'Lab coat for biology class',
+            'title' => 'Calculator for an exam',
             'seller_initials' => 'JL',
             'seller_name' => 'Jamie Lee',
             'user_id' => $user->id,
         ]);
+    }
+
+    public function test_api_seller_profiles_and_reviews_are_private_and_can_be_updated(): void
+    {
+        $seller = User::factory()->create(['email' => 'seller@example.test']);
+        $reviewer = User::factory()->create();
+        $seller->listings()->create([
+            'title' => 'Seller listing',
+            'description' => 'A school supply listing.',
+            'price' => 80,
+            'type' => 'sale',
+            'category' => 'School Supplies',
+            'location' => 'Main Campus',
+            'seller_name' => $seller->name,
+            'seller_initials' => 'SS',
+        ]);
+
+        $this->getJson('/api/sellers/'.$seller->id)->assertUnauthorized();
+
+        $this->actingAs($reviewer, 'sanctum')->getJson('/api/sellers/'.$seller->id)
+            ->assertOk()
+            ->assertJsonPath('data.name', $seller->name)
+            ->assertJsonPath('data.can_review', true)
+            ->assertJsonPath('data.reviews_count', 0)
+            ->assertJsonMissingPath('data.email');
+        $this->actingAs($reviewer, 'sanctum')->getJson('/api/listings?mode=sale')
+            ->assertOk()
+            ->assertJsonPath('data.0.user.name', $seller->name)
+            ->assertJsonMissingPath('data.0.user.email');
+
+        $this->actingAs($reviewer, 'sanctum')->postJson('/api/sellers/'.$seller->id.'/reviews', [
+            'rating' => 4,
+            'body' => 'Easy to arrange a campus meetup.',
+        ])->assertOk()->assertJsonPath('data.rating', 4);
+
+        $this->actingAs($reviewer, 'sanctum')->postJson('/api/sellers/'.$seller->id.'/reviews', [
+            'rating' => 5,
+            'body' => 'Updated review.',
+        ])->assertOk()->assertJsonPath('data.rating', 5);
+
+        $this->assertDatabaseCount('seller_reviews', 1);
+        $this->actingAs($reviewer, 'sanctum')->getJson('/api/sellers/'.$seller->id)
+            ->assertOk()
+            ->assertJsonPath('data.average_rating', 5)
+            ->assertJsonPath('data.reviews_count', 1)
+            ->assertJsonPath('data.my_review.body', 'Updated review.');
+
+        $this->actingAs($seller, 'sanctum')->postJson('/api/sellers/'.$seller->id.'/reviews', [
+            'rating' => 5,
+            'body' => 'I like myself.',
+        ])->assertForbidden();
     }
 
     public function test_api_rejects_non_school_categories_and_rentals_without_a_period(): void
