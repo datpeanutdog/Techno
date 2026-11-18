@@ -1,6 +1,144 @@
 const favoriteKey = 'pasabuy:favorites';
 const toast = document.querySelector('#toast');
 
+const liveThread = document.querySelector('[data-live-messages]');
+
+if (liveThread) {
+    const updatesUrl = new URL(liveThread.dataset.updatesUrl, window.location.href);
+    const currentUserId = Number(liveThread.dataset.currentUser);
+    const liveStatus = document.querySelector('[data-live-status]');
+    const composer = document.querySelector('[data-live-compose]');
+    const composerError = composer.querySelector('[data-compose-error]');
+    const composerStatus = composer.querySelector('[data-compose-status]');
+    const messageInput = composer.querySelector('textarea[name="body"]');
+    const submitButton = composer.querySelector('button[type="submit"]');
+    const pagination = liveThread.querySelector('.pagination-wrap');
+    const messageIds = Array.from(liveThread.querySelectorAll('[data-message-id]'))
+        .map((message) => Number(message.dataset.messageId));
+    let lastMessageId = Math.max(0, ...messageIds);
+    let isCheckingForMessages = false;
+    let isSendingMessage = false;
+
+    liveThread.scrollTop = liveThread.scrollHeight;
+
+    const addMessage = (message) => {
+        const messageId = Number(message.id);
+
+        if (!Number.isSafeInteger(messageId) || messageId <= lastMessageId) return false;
+
+        const bubble = document.createElement('article');
+        bubble.classList.add('message-bubble');
+
+        if (Number(message.sender_id) === currentUserId) {
+            bubble.classList.add('message-own');
+        }
+
+        bubble.dataset.messageId = String(messageId);
+
+        const sender = document.createElement('span');
+        sender.classList.add('message-sender');
+        sender.textContent = message.sender_name;
+
+        const body = document.createElement('p');
+        body.textContent = message.body;
+
+        const time = document.createElement('time');
+        time.dateTime = message.created_at;
+        time.textContent = message.display_time;
+
+        bubble.append(sender, body, time);
+        liveThread.insertBefore(bubble, pagination);
+        liveThread.querySelector('.empty-state')?.remove();
+        lastMessageId = messageId;
+
+        return true;
+    };
+
+    const pollForMessages = async () => {
+        if (isCheckingForMessages || document.hidden) return;
+
+        isCheckingForMessages = true;
+
+        try {
+            updatesUrl.searchParams.set('after', String(lastMessageId));
+            const response = await fetch(updatesUrl, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Message update request failed with status ${response.status}.`);
+            }
+
+            const { data } = await response.json();
+
+            if (!Array.isArray(data)) {
+                throw new Error('Message update response did not contain a message list.');
+            }
+
+            const wasAtBottom = liveThread.scrollHeight - liveThread.scrollTop - liveThread.clientHeight < 60;
+            const previousScrollTop = liveThread.scrollTop;
+            const addedMessages = data.reduce((added, message) => addMessage(message) || added, false);
+
+            if (addedMessages && wasAtBottom) {
+                liveThread.scrollTop = liveThread.scrollHeight;
+            } else if (addedMessages) {
+                liveThread.scrollTop = previousScrollTop;
+            }
+
+            if (liveStatus) liveStatus.textContent = '';
+        } catch (error) {
+            if (liveStatus) liveStatus.textContent = 'Connection interrupted. Retrying for new messages…';
+            console.error(error);
+        } finally {
+            isCheckingForMessages = false;
+        }
+    };
+
+    composer.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (isSendingMessage) return;
+
+        isSendingMessage = true;
+        composerError.hidden = true;
+        composerError.textContent = '';
+        composerStatus.textContent = 'Sending message…';
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch(composer.action, {
+                method: 'POST',
+                headers: { Accept: 'application/json' },
+                body: new FormData(composer),
+                credentials: 'same-origin',
+            });
+            const payload = await response.json();
+
+            if (!response.ok) {
+                const validationError = Object.values(payload.errors ?? {}).flat()[0];
+                throw new Error(validationError ?? payload.message ?? `Message could not be sent (status ${response.status}).`);
+            }
+
+            addMessage(payload.data);
+            messageInput.value = '';
+            liveThread.scrollTop = liveThread.scrollHeight;
+            composerStatus.textContent = 'Message sent.';
+        } catch (error) {
+            composerStatus.textContent = '';
+            composerError.textContent = error.message || 'Message could not be sent. Please try again.';
+            composerError.hidden = false;
+            console.error(error);
+        } finally {
+            submitButton.disabled = false;
+            isSendingMessage = false;
+        }
+    });
+
+    pollForMessages();
+    window.setInterval(pollForMessages, 2000);
+}
+
 const savedFavorites = () => {
     const stored = JSON.parse(window.localStorage.getItem(favoriteKey) || '[]');
 

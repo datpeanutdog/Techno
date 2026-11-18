@@ -49,6 +49,9 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
     Route::post('/listings', [MarketplaceController::class, 'store'])->middleware('throttle:10,1')->name('listings.store');
     Route::get('/messages', [ConversationController::class, 'index'])->name('conversations.index');
     Route::get('/messages/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
+    Route::get('/messages/{conversation}/updates', [MessageController::class, 'updates'])
+        ->middleware('throttle:60,1')
+        ->name('conversations.messages.updates');
     Route::get('/listings/{listing:slug}/message', [MarketplaceController::class, 'messageSeller'])
         ->name('listings.messages.create');
     Route::post('/listings/{listing:slug}/messages', [ConversationController::class, 'store'])

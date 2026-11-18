@@ -117,6 +117,51 @@ class ConversationTest extends TestCase
         $this->assertDatabaseCount('messages', 1);
     }
 
+    public function test_conversation_updates_return_only_new_messages_and_mark_them_read(): void
+    {
+        $seller = User::factory()->create(['name' => 'Sam Seller']);
+        $buyer = User::factory()->create();
+        $listing = $this->createListing($seller);
+        $conversation = $this->startConversation($buyer, $listing);
+        $firstMessage = $conversation->messages()->sole();
+        $newMessage = $conversation->messages()->create([
+            'sender_id' => $seller->id,
+            'body' => 'Yes, meet by the library.',
+        ]);
+
+        $this->actingAs($buyer)
+            ->getJson(route('conversations.messages.updates', [$conversation, 'after' => $firstMessage->id]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $newMessage->id)
+            ->assertJsonPath('data.0.sender_name', 'Sam Seller')
+            ->assertJsonPath('data.0.body', 'Yes, meet by the library.');
+
+        $this->assertNotNull($newMessage->fresh()->read_at);
+
+        $stranger = User::factory()->create();
+        $this->actingAs($stranger)
+            ->getJson(route('conversations.messages.updates', [$conversation, 'after' => $firstMessage->id]))
+            ->assertNotFound();
+    }
+
+    public function test_ajax_message_send_returns_the_created_message_without_redirecting(): void
+    {
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create();
+        $listing = $this->createListing($seller);
+        $conversation = $this->startConversation($buyer, $listing);
+
+        $this->actingAs($buyer)
+            ->postJson(route('conversations.messages.store', $conversation), [
+                'body' => 'I can meet after class.',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.sender_id', $buyer->id)
+            ->assertJsonPath('data.sender_name', $buyer->name)
+            ->assertJsonPath('data.body', 'I can meet after class.');
+    }
+
     public function test_sellers_cannot_start_a_conversation_with_themselves(): void
     {
         $seller = User::factory()->create();
