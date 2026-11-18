@@ -15,6 +15,10 @@ class MarketplaceController extends Controller
 {
     public function index(Request $request): View
     {
+        if (! $request->user()) {
+            return view('landing');
+        }
+
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
             'location' => ['nullable', 'string', 'max:100'],

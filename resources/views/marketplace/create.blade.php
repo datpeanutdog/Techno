@@ -6,20 +6,12 @@
     <div class="create-shell">
         <a class="back-link" href="{{ route('marketplace.index') }}">← Back to the marketplace</a>
         <div class="create-layout">
-            <section class="create-intro">
-                <p class="eyebrow"><span class="eyebrow-spark">✳</span> Make campus life easier</p>
-                <h1>{{ isset($listing) ? 'Update your campus find.' : 'Pass a school find' }} @unless(isset($listing))<span>on.</span>@endunless</h1>
-                <p>Got a textbook, uniform, calculator, or dorm essential to sell or rent? Another student could use it.</p>
-                <div class="create-note"><span aria-hidden="true">☺</span><span>Keep listings focused on school, class, and campus life. Clear photos help students know what they're getting.</span></div>
-                <div class="create-doodle" aria-hidden="true">✳</div>
-            </section>
-
             <form class="listing-form" method="POST" enctype="multipart/form-data" action="{{ isset($listing) ? route('my-listings.update', $listing) : route('listings.store') }}">
                 @csrf
                 @if (isset($listing)) @method('PUT') @endif
                 <div class="form-heading">
                     <span class="form-step">01</span>
-                    <div><h2>{{ isset($listing) ? 'Edit your campus listing' : 'Post a campus listing' }}</h2><p>Share something another student can use.</p></div>
+                    <div><h2>{{ isset($listing) ? 'Edit your campus listing' : 'Post a campus listing' }}</h2></div>
                 </div>
 
                 @if ($errors->any())
@@ -98,7 +90,6 @@
                 <p class="form-help">If you upload a photo, it is used instead of the link.</p>
 
                 <button class="button button-navy form-submit" type="submit">{{ isset($listing) ? 'Save listing changes' : 'Post campus listing' }} <span aria-hidden="true">→</span></button>
-                <p class="form-fine-print">Post school-related listings and arrange a safe campus handoff.</p>
             </form>
         </div>
     </div>

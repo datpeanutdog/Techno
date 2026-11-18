@@ -40,6 +40,8 @@ class MarketplaceTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('listings.create'))
             ->assertOk()
             ->assertSee('Post campus listing')
+            ->assertDontSee('Make campus life easier')
+            ->assertDontSee('Pass a school find')
             ->assertSee('<option value="hour"', false)
             ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Sell</span>'], false);
     }
@@ -171,20 +173,23 @@ class MarketplaceTest extends TestCase
         $this->post(route('listings.store'), [])->assertRedirect(route('login'));
     }
 
-    public function test_public_marketplace_is_the_first_page_after_login(): void
+    public function test_visitors_see_the_welcome_page_and_sign_in_is_required_for_browsing(): void
     {
         $this->seed();
         $user = User::factory()->create();
 
         $this->get('/')->assertOk()
-            ->assertSee('Search campus listings')
-            ->assertSee('Join PASABUY');
-        $this->get('/?mode=rent')->assertOk()->assertSee('Scientific calculator for exams');
+            ->assertSee('Create your account')
+            ->assertDontSee('Search campus listings')
+            ->assertDontSee('Engineering calculus book set');
+        $this->get('/?mode=rent')->assertOk()->assertDontSee('Scientific calculator for exams');
+        $this->get(route('listings.show', Listing::where('slug', 'engineering-calculus-books')->firstOrFail()))
+            ->assertRedirect(route('login'));
         $this->actingAs($user)->get('/')->assertOk()->assertSee('Search campus listings');
         $this->post('/logout')->assertRedirect(route('marketplace.index'));
     }
 
-    public function test_visitors_can_view_listing_details_but_must_sign_in_to_contact_the_seller(): void
+    public function test_visitors_must_sign_in_to_view_listing_and_seller_details(): void
     {
         $seller = User::factory()->create();
         $listing = $seller->listings()->create([
@@ -198,10 +203,8 @@ class MarketplaceTest extends TestCase
             'seller_initials' => 'ST',
         ]);
 
-        $this->get(route('listings.show', $listing))
-            ->assertOk()
-            ->assertSee('Log in to message the seller');
-
+        $this->get(route('listings.show', $listing))->assertRedirect(route('login'));
+        $this->get(route('sellers.show', $seller))->assertRedirect(route('login'));
         $this->get(route('listings.messages.create', $listing))->assertRedirect(route('login'));
     }
 
