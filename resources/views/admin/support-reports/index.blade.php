@@ -8,7 +8,7 @@
             <div>
                 <p class="eyebrow">ADMIN ACCOUNT PANEL</p>
                 <h1>Support reports</h1>
-                <p class="support-intro">Review customer reports and evidence before taking account action.</p>
+                <p class="support-intro">Review account reports and customer support requests.</p>
             </div>
             <a class="button button-dark" href="{{ route('marketplace.index') }}">Back to marketplace</a>
         </div>
@@ -20,8 +20,17 @@
                     <span class="support-status status-{{ $report->status }}">{{ ucfirst($report->status) }}</span>
                 </div>
                 <div class="admin-report-info">
-                    <span><small>Reported account</small>{{ $report->reportedUser?->name ?? 'Account no longer available' }}</span>
-                    <span><small>Submitted by</small>{{ $report->reporter?->name ?? 'Account no longer available' }}</span>
+                    <span>
+                        <small>Reported account</small>
+                        {{ $report->reportedUser?->name ?? (array_key_exists($report->category, \App\Models\SupportReport::CONTACT_CATEGORIES) ? 'Not applicable' : 'Account no longer available') }}
+                    </span>
+                    <span>
+                        <small>Submitted by</small>
+                        {{ $report->reporter?->name ?? $report->contact_name ?? 'Account no longer available' }}
+                        @if ($report->contact_email)
+                            <br>{{ $report->contact_email }}
+                        @endif
+                    </span>
                     <span><small>Evidence</small>{{ count($report->proof_paths ?? []) }} image(s)</span>
                     <span><small>Received</small>{{ $report->created_at->format('M j, Y · g:i A') }}</span>
                 </div>

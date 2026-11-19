@@ -15,8 +15,22 @@
             </div>
 
             <div class="admin-report-info">
-                <span><small>Reported account</small>{{ $report->reportedUser?->name ?? 'Account no longer available' }}<br>{{ $report->reportedUser?->account_identifier }}<br>{{ $report->reportedUser?->email }}</span>
-                <span><small>Submitted by</small>{{ $report->reporter?->name ?? 'Account no longer available' }}<br>{{ $report->reporter?->account_identifier }}<br>{{ $report->reporter?->email }}</span>
+                <span>
+                    <small>Reported account</small>
+                    @if ($report->reportedUser)
+                        {{ $report->reportedUser->name }}<br>
+                        {{ $report->reportedUser->account_identifier }}<br>
+                        {{ $report->reportedUser->email }}
+                    @else
+                        {{ array_key_exists($report->category, \App\Models\SupportReport::CONTACT_CATEGORIES) ? 'Not applicable' : 'Account no longer available' }}
+                    @endif
+                </span>
+                <span>
+                    <small>Submitted by</small>
+                    {{ $report->reporter?->name ?? $report->contact_name ?? 'Account no longer available' }}<br>
+                    {{ $report->reporter?->account_identifier }}<br>
+                    {{ $report->reporter?->email ?? $report->contact_email }}
+                </span>
                 <span><small>Received</small>{{ $report->created_at->format('M j, Y · g:i A') }}</span>
             </div>
 

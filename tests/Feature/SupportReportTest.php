@@ -99,6 +99,68 @@ class SupportReportTest extends TestCase
         $this->get(route('support.reports.create'))->assertRedirect(route('login'));
     }
 
+    public function test_guest_can_open_the_customer_support_panel(): void
+    {
+        $this->get(route('support.reports.index'))
+            ->assertOk()
+            ->assertSee('You can contact us without logging in.')
+            ->assertSee('name="contact_email"', false);
+    }
+
+    public function test_guest_can_contact_support_without_an_account(): void
+    {
+        $this->post(route('support.reports.contact.store'), [
+            'contact_name' => 'Sam Visitor',
+            'contact_email' => 'sam@example.test',
+            'category' => 'account_recovery',
+            'details' => 'I cannot access the email address connected to my account.',
+        ])->assertRedirect(route('support.reports.index'))
+            ->assertSessionHas('status', 'Your message has been sent to customer support. The team can reach you at the email address you provided.');
+
+        $this->assertDatabaseHas('support_reports', [
+            'reporter_id' => null,
+            'reported_user_id' => null,
+            'contact_name' => 'Sam Visitor',
+            'contact_email' => 'sam@example.test',
+            'category' => 'account_recovery',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_guest_support_contact_requires_a_valid_email_address(): void
+    {
+        $this->from(route('support.reports.index'))
+            ->post(route('support.reports.contact.store'), [
+                'contact_name' => 'Sam Visitor',
+                'contact_email' => 'not-an-email',
+                'category' => 'general_support',
+                'details' => 'I need help.',
+            ])->assertRedirect(route('support.reports.index'))
+            ->assertSessionHasErrors('contact_email');
+
+        $this->assertDatabaseCount('support_reports', 0);
+    }
+
+    public function test_admin_can_review_a_guest_support_request_and_contact_details_are_escaped(): void
+    {
+        config(['app.admin_emails' => ['support@example.test']]);
+        $admin = User::factory()->create(['email' => 'support@example.test']);
+        $this->post(route('support.reports.contact.store'), [
+            'contact_name' => '<script>alert(1)</script>',
+            'contact_email' => 'visitor@example.test',
+            'category' => 'general_support',
+            'details' => 'I need help with my account.',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.support-reports.index'))
+            ->assertOk()
+            ->assertSee('visitor@example.test')
+            ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)
+            ->assertDontSee('<script>alert(1)</script>', false)
+            ->assertSee('Not applicable');
+    }
+
     public function test_signed_in_user_can_open_a_report_form_for_a_listing_seller(): void
     {
         $reporter = User::factory()->create();

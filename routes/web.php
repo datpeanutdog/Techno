@@ -23,6 +23,10 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
+Route::get('/support', [SupportReportController::class, 'index'])->name('support.reports.index');
+Route::post('/support', [SupportReportController::class, 'storeContact'])
+    ->middleware('throttle:5,1')
+    ->name('support.reports.contact.store');
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/sellers/{user}', [SellerController::class, 'show'])->name('sellers.show');
