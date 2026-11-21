@@ -87,8 +87,5 @@
                 </form>
             @endif
         </div>
-        <a class="landing-photo-credit" href="https://commons.wikimedia.org/wiki/File:University_of_Science_and_Technology_of_Southern_Philippines_Main_Campus_(Original_Work).jpg" target="_blank" rel="noopener noreferrer">
-            Photo: FSUUpedia Restore Division · CC BY-SA 3.0 · Cropped and resized
-        </a>
     </section>
 @endsection

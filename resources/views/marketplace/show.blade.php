@@ -17,7 +17,7 @@
             <article class="detail-card">
                 <div class="listing-card-topline">
                     <span class="listing-category">{{ $listing->category }}</span>
-                    @if ($listing->condition)<span class="listing-condition">{{ $listing->condition }}</span>@endif
+                    @if ($listing->condition)<span class="listing-condition condition-{{ Illuminate\Support\Str::slug($listing->condition) }}">{{ $listing->condition }}</span>@endif
                 </div>
                 <h1>{{ $listing->title }}</h1>
                 <p class="detail-price">₱{{ number_format((float) $listing->price) }}@if ($listing->type === 'rent') <span>/ {{ $listing->rent_period }}</span>@endif</p>

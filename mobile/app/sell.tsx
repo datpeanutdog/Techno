@@ -157,11 +157,7 @@ export default function SellScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-      <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <Text style={styles.topBarText}>✳  PASS IT ON TO YOUR CAMPUS</Text>
-        <Text style={styles.topBarLocation}>SELL · RENT</Text>
-      </View>
+      <StatusBar style="dark" />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹  Back</Text>
@@ -188,7 +184,6 @@ export default function SellScreen() {
             <View style={styles.sellSparkle}>
               <Text style={styles.sellSparkleText}>✳</Text>
             </View>
-            <Text style={styles.sellEyebrow}>MAKE CAMPUS LIFE EASIER</Text>
             <Text style={styles.sellTitle}>Pass a good find <Text style={styles.sellTitleAccent}>on.</Text></Text>
             <Text style={styles.sellDescription}>
               A textbook, calculator, or dorm essential could be exactly what another student needs.

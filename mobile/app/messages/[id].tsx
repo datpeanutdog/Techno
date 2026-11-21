@@ -190,11 +190,7 @@ export default function ConversationScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={appStyles.safeArea}>
       <View style={appStyles.app}>
-        <StatusBar style="light" />
-        <View style={appStyles.topBar}>
-          <Text style={appStyles.topBarText}>✳  PRIVATE CONVERSATION</Text>
-          <Text style={appStyles.topBarLocation}>CAMPUS FINDS</Text>
-        </View>
+        <StatusBar style="dark" />
         <View style={appStyles.header}>
           <Pressable onPress={() => router.back()} style={appStyles.backButton}>
             <Text style={appStyles.backButtonText}>‹  Back</Text>
@@ -349,8 +345,8 @@ const screenStyles = StyleSheet.create({
   avatarText: { color: COLORS.navy, fontSize: 15, fontWeight: '700' },
   listingCopy: { flex: 1, minWidth: 0 },
   sellerName: { color: COLORS.navy, fontSize: 13, fontWeight: '700' },
-  listingTitle: { marginTop: 2, color: COLORS.muted, fontSize: 11 },
-  listingType: { color: COLORS.goldDark, fontSize: 9, fontWeight: '800' },
+  listingTitle: { marginTop: 2, color: COLORS.muted, fontSize: 12 },
+  listingType: { color: COLORS.goldDark, fontSize: 11, fontWeight: '800' },
   thread: { flexGrow: 1, justifyContent: 'flex-end', gap: 10, padding: 16 },
   message: {
     maxWidth: '84%',
@@ -363,7 +359,7 @@ const screenStyles = StyleSheet.create({
   ownMessage: { alignSelf: 'flex-end', backgroundColor: COLORS.navy },
   messageBody: { color: COLORS.ink, fontSize: 13, lineHeight: 19 },
   ownMessageBody: { color: COLORS.white },
-  messageDate: { alignSelf: 'flex-end', marginTop: 4, color: COLORS.muted, fontSize: 9 },
+  messageDate: { alignSelf: 'flex-end', marginTop: 4, color: COLORS.muted, fontSize: 11 },
   ownMessageDate: { color: '#e5d6c8' },
   compose: {
     flexDirection: 'row',
@@ -377,7 +373,7 @@ const screenStyles = StyleSheet.create({
   composeInput: {
     flex: 1,
     maxHeight: 110,
-    minHeight: 42,
+    minHeight: 48,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
@@ -387,7 +383,7 @@ const screenStyles = StyleSheet.create({
     fontSize: 13,
   },
   sendButton: {
-    minHeight: 42,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -396,5 +392,5 @@ const screenStyles = StyleSheet.create({
   },
   sendDisabled: { opacity: 0.55 },
   sendButtonText: { color: COLORS.white, fontSize: 12, fontWeight: '700' },
-  hint: { paddingHorizontal: 14, paddingBottom: 8, color: COLORS.muted, fontSize: 10, textAlign: 'center' },
+  hint: { paddingHorizontal: 14, paddingBottom: 8, color: COLORS.muted, fontSize: 12, lineHeight: 17, textAlign: 'center' },
 });

@@ -24,6 +24,7 @@ class MarketplaceTest extends TestCase
             ->assertSee('All categories')
             ->assertSee('Search')
             ->assertSee('Engineering calculus book set')
+            ->assertSee('class="listing-condition condition-good">Good</span>', false)
             ->assertSee('Laptop for classes & projects')
             ->assertDontSee('Student lab coat')
             ->assertSee('<nav class="market-tabs" aria-label="Browse sale and rental listings">', false)
@@ -32,18 +33,30 @@ class MarketplaceTest extends TestCase
             ->assertSee('>Buy<', false)
             ->assertSee('Find something to keep')
             ->assertSee('Borrow it for a while')
+            ->assertSee('List an item')
+            ->assertDontSee('market-sell-link', false)
             ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Buy</span>'], false);
     }
 
-    public function test_sell_navigation_opens_listing_form_and_marks_sell_as_active(): void
+    public function test_sidebar_shows_profile_and_spaced_navigation_in_order(): void
     {
         $this->actingAs(User::factory()->create())->get(route('listings.create'))
             ->assertOk()
-            ->assertSee('Post campus listing')
-            ->assertDontSee('Make campus life easier')
-            ->assertDontSee('Pass a school find')
-            ->assertSee('<option value="hour"', false)
-            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Sell</span>'], false);
+            ->assertSee('List an item')
+            ->assertDontSee('>Sell</span>', false)
+            ->assertDontSee('<p class="sidebar-section-label">Marketplace</p>', false)
+            ->assertSee('<a class="sidebar-profile-link" href="'.route('profile.edit').'"', false)
+            ->assertSeeInOrder([
+                'class="sidebar-profile-link"',
+                'class="sidebar-profile-avatar sidebar-profile-initial"',
+                'class="sidebar-profile-name"',
+                '>Buy</span>',
+                '>Rent</span>',
+                'Your account',
+                '>Manage Listing</span>',
+                '>Message</span>',
+                '>Support</span>',
+            ], false);
     }
 
     public function test_search_filters_listings_by_keyword_and_location(): void
@@ -77,6 +90,7 @@ class MarketplaceTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('listings.show', $listing))
             ->assertOk()
             ->assertSee('Mika Santos')
+            ->assertSee('class="listing-condition condition-good">Good</span>', false)
             ->assertSee('About this campus find');
     }
 

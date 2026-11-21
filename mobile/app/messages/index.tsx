@@ -70,11 +70,7 @@ export default function MessagesScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={appStyles.safeArea}>
       <View style={appStyles.app}>
-        <StatusBar style="light" />
-        <View style={appStyles.topBar}>
-          <Text style={appStyles.topBarText}>✳  STUDENT TO STUDENT</Text>
-          <Text style={appStyles.topBarLocation}>PRIVATE MESSAGES</Text>
-        </View>
+        <StatusBar style="dark" />
         <View style={appStyles.header}>
           <Pressable onPress={() => router.back()} style={appStyles.backButton}>
             <Text style={appStyles.backButtonText}>‹  Back</Text>
@@ -177,7 +173,7 @@ export default function MessagesScreen() {
 
 const screenStyles = StyleSheet.create({
   content: { flexGrow: 1, padding: 18 },
-  intro: { marginBottom: 14, color: COLORS.muted, fontSize: 13, lineHeight: 19 },
+  intro: { marginBottom: 16, color: COLORS.muted, fontSize: 14, lineHeight: 21 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -203,9 +199,9 @@ const screenStyles = StyleSheet.create({
   copy: { flex: 1, minWidth: 0 },
   topline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   name: { flex: 1, color: COLORS.navy, fontSize: 14, fontWeight: '700' },
-  time: { color: COLORS.muted, fontSize: 10 },
-  listing: { marginTop: 3, color: COLORS.goldDark, fontSize: 11, fontWeight: '700' },
-  preview: { marginTop: 3, color: COLORS.muted, fontSize: 11, lineHeight: 16 },
+  time: { color: COLORS.muted, fontSize: 11 },
+  listing: { marginTop: 3, color: COLORS.goldDark, fontSize: 12, fontWeight: '700' },
+  preview: { marginTop: 3, color: COLORS.muted, fontSize: 12, lineHeight: 18 },
   unreadBadge: {
     minWidth: 22,
     height: 22,
@@ -215,5 +211,5 @@ const screenStyles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: COLORS.navy,
   },
-  unreadText: { color: COLORS.white, fontSize: 10, fontWeight: '700' },
+  unreadText: { color: COLORS.white, fontSize: 11, fontWeight: '700' },
 });

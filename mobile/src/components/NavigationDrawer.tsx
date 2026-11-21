@@ -306,7 +306,6 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
                   </>
                 )}
               </Pressable>
-              <Text style={drawerStyles.footerCaption}>PASABUY · YOUR CAMPUS COMMUNITY</Text>
             </View>
           </SafeAreaView>
         </View>
@@ -388,7 +387,7 @@ const drawerStyles = StyleSheet.create({
   sectionLabel: {
     marginBottom: 11,
     color: COLORS.muted,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.2,
   },
@@ -413,7 +412,7 @@ const drawerStyles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: '#c9595f',
   },
-  badgeText: { color: COLORS.white, fontSize: 10, fontWeight: '800' },
+  badgeText: { color: COLORS.white, fontSize: 11, fontWeight: '800' },
   error: { marginTop: 10, color: '#a0453e', fontSize: 11, lineHeight: 16 },
   footer: { paddingHorizontal: 18, paddingBottom: 14 },
   logoutButton: {
@@ -429,11 +428,10 @@ const drawerStyles = StyleSheet.create({
   },
   logoutIcon: { color: COLORS.navy, fontSize: 18 },
   logoutText: { color: COLORS.navy, fontSize: 14, fontWeight: '700' },
-  footerCaption: { marginTop: 14, color: COLORS.muted, fontSize: 8, textAlign: 'center', letterSpacing: 0.8 },
   menuButton: {
     position: 'relative',
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

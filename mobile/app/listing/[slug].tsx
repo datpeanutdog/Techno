@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { COLORS, CATEGORY_ICONS, styles } from '../../App';
+import { COLORS, CATEGORY_ICONS, getConditionTone, styles } from '../../App';
 import {
   clearAuthToken,
   FAVORITES_KEY,
@@ -88,11 +88,7 @@ export default function ListingDetailScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-      <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <Text style={styles.topBarText}>✳  A GOOD FIND, UP CLOSE</Text>
-        <Text style={styles.topBarLocation}>CAMPUS FINDS</Text>
-      </View>
+      <StatusBar style="dark" />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹  Back</Text>
@@ -141,7 +137,11 @@ export default function ListingDetailScreen() {
             <View style={styles.divider} />
             <Text style={styles.detailHeading}>A little more about it</Text>
             <Text style={styles.detailDescription}>{listing.description}</Text>
-            {listing.condition ? <Text style={styles.conditionPill}>{listing.condition}</Text> : null}
+            {listing.condition ? (
+              <View style={[styles.conditionPill, { backgroundColor: getConditionTone(listing.condition).backgroundColor }]}>
+                <Text style={[styles.conditionPillText, { color: getConditionTone(listing.condition).color }]}>{listing.condition}</Text>
+              </View>
+            ) : null}
             <View style={styles.sellerCard}>
               <View style={styles.sellerAvatar}>
                 {listing.user?.avatar_url ? (
@@ -175,7 +175,7 @@ export default function ListingDetailScreen() {
                 onPress={() => router.push({ pathname: '/seller/[id]', params: { id: String(listing.user?.id) } })}
                 style={{ alignSelf: 'flex-start', paddingVertical: 8 }}
               >
-                <Text style={{ color: COLORS.goldDark, fontSize: 11, fontWeight: '700' }}>
+                <Text style={{ color: COLORS.goldDark, fontSize: 12, fontWeight: '700' }}>
                   View seller profile &amp; reviews →
                 </Text>
               </Pressable>
