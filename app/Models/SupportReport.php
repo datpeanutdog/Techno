@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'reporter_id',
     'reported_user_id',
+    'contact_name',
+    'contact_email',
     'category',
     'details',
     'proof_paths',
@@ -26,6 +28,20 @@ class SupportReport extends Model
         'scam' => 'Scam or fraud',
         'harassment' => 'Harassment or bullying',
         'other' => 'Other',
+        'account_recovery' => 'Account recovery',
+        'general_support' => 'General support',
+    ];
+
+    public const REPORT_CATEGORIES = [
+        'inappropriate_content',
+        'scam',
+        'harassment',
+        'other',
+    ];
+
+    public const CONTACT_CATEGORIES = [
+        'account_recovery' => 'Account recovery',
+        'general_support' => 'General support',
     ];
 
     public function reporter(): BelongsTo

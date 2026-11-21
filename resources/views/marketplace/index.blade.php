@@ -21,10 +21,8 @@
         @unless ($isSavedView)
         <div class="section-heading">
             <div>
-                <p class="eyebrow eyebrow-small">A good place to start</p>
                 <h2>Find your kind of <span>campus essential.</span></h2>
             </div>
-            <p class="section-aside">The next student who needs it could be right around the corner.</p>
         </div>
 
         <form class="marketplace-filter-bar" method="GET" action="{{ route('marketplace.index') }}" aria-label="Search and filter campus listings">
@@ -48,14 +46,9 @@
 
         <div class="listings-heading">
             <div>
-<<<<<<< Updated upstream
-                <p class="eyebrow eyebrow-small">{{ request('mode') === 'rent' ? 'Borrow it for class, keep your budget' : 'Passed on by students, ready for class' }}</p>
-                <h2>{{ request('mode') === 'rent' ? 'Things to rent for school.' : 'The latest campus finds.' }}</h2>
-=======
                 <a class="button button-navy listings-create-button" href="{{ route('listings.create') }}">
                     <span aria-hidden="true">＋</span> List an item
                 </a>
->>>>>>> Stashed changes
             </div>
             <form class="sort-form" method="GET" action="{{ route('marketplace.index') }}">
                 @foreach (['q', 'location', 'mode', 'category', 'view', 'favorites'] as $filter)
@@ -86,7 +79,6 @@
                 <span class="market-mode-icon market-mode-icon-rent" aria-hidden="true">↻</span>
                 <span class="market-mode-copy"><strong>Rent</strong><small>Borrow it for a while</small></span>
             </a>
-            <a class="market-sell-link" href="{{ route('listings.create') }}">List an item <span aria-hidden="true">＋</span></a>
         </nav>
         @endunless
 
@@ -125,7 +117,7 @@
                         <div class="listing-details">
                             <div class="listing-card-topline">
                                 <span class="listing-category">{{ $listing->category }}</span>
-                                @if ($listing->condition)<span class="listing-condition">{{ $listing->condition }}</span>@endif
+                                @if ($listing->condition)<span class="listing-condition condition-{{ Illuminate\Support\Str::slug($listing->condition) }}">{{ $listing->condition }}</span>@endif
                             </div>
                             <a class="listing-title" href="{{ route('listings.show', $listing) }}">{{ $listing->title }}</a>
                             <div class="listing-meta"><span aria-hidden="true">⌖</span> {{ $listing->location }}</div>
@@ -177,13 +169,4 @@
         @endif
     </section>
 
-    <section class="sell-banner">
-        <div class="sell-banner-mark" aria-hidden="true">✳</div>
-        <div>
-            <p class="eyebrow">Good things travel campus to campus</p>
-            <h2>Finished the semester?<br>Pass your school finds on.</h2>
-            <p class="sell-banner-copy">Your books and supplies could be someone's next great start.</p>
-        </div>
-        <a class="button button-navy" href="{{ route('listings.create') }}">List a school find <span aria-hidden="true">→</span></a>
-    </section>
 @endsection

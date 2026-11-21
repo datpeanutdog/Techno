@@ -27,7 +27,7 @@ class ExampleTest extends TestCase
             ->assertOk()
             ->assertSee('Welcome back')
             ->assertSee('action="'.route('login').'"', false)
-            ->assertSee(route('support.reports.create'), false)
+            ->assertSee(route('support.reports.index'), false)
             ->assertSee('Contact support')
             ->assertDontSee('name="password_confirmation"', false);
     }

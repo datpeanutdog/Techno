@@ -40,7 +40,7 @@
 
                     <label class="remember-label"><input type="checkbox" name="remember"> Keep me signed in</label>
                     <button class="button button-navy landing-signup-submit" type="submit">Log in <span aria-hidden="true">→</span></button>
-                    <a class="landing-support-link" href="{{ route('support.reports.create') }}">
+                    <a class="landing-support-link" href="{{ route('support.reports.index') }}">
                         <span class="landing-support-icon" aria-hidden="true">?</span>
                         <span><strong>Need help?</strong><small>Contact support</small></span>
                         <span class="landing-support-arrow" aria-hidden="true">→</span>
@@ -78,12 +78,14 @@
                     <input class="form-control" id="landing-password-confirmation" name="password_confirmation" type="password" autocomplete="new-password" required>
 
                     <button class="button button-navy landing-signup-submit" type="submit">Create account <span aria-hidden="true">→</span></button>
+                    <a class="landing-support-link" href="{{ route('support.reports.index') }}">
+                        <span class="landing-support-icon" aria-hidden="true">?</span>
+                        <span><strong>Need help?</strong><small>Contact support</small></span>
+                        <span class="landing-support-arrow" aria-hidden="true">→</span>
+                    </a>
                     <p class="auth-footnote">Already have an account? <a href="{{ route('marketplace.index', ['panel' => 'login']) }}">Log in</a></p>
                 </form>
             @endif
         </div>
-        <a class="landing-photo-credit" href="https://commons.wikimedia.org/wiki/File:University_of_Science_and_Technology_of_Southern_Philippines_Main_Campus_(Original_Work).jpg" target="_blank" rel="noopener noreferrer">
-            Photo: FSUUpedia Restore Division · CC BY-SA 3.0 · Cropped and resized
-        </a>
     </section>
 @endsection

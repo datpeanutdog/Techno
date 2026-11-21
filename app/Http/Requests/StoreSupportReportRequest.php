@@ -36,7 +36,7 @@ class StoreSupportReportRequest extends FormRequest
                 'exists:users,email',
                 Rule::notIn([$this->user()?->email]),
             ],
-            'category' => ['required', Rule::in(array_keys(SupportReport::CATEGORIES))],
+            'category' => ['required', Rule::in(SupportReport::REPORT_CATEGORIES)],
             'details' => ['required', 'string', 'max:5000'],
             'proofs' => ['nullable', 'array', 'max:3'],
             'proofs.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],

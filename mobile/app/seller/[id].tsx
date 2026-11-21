@@ -117,11 +117,7 @@ export default function SellerProfileScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-        <StatusBar style="light" />
-        <View style={styles.topBar}>
-          <Text style={styles.topBarText}>✳  STUDENT SELLER</Text>
-          <Text style={styles.topBarLocation}>CAMPUS COMMUNITY</Text>
-        </View>
+        <StatusBar style="dark" />
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backButtonText}>‹  Back</Text>
@@ -286,11 +282,11 @@ const sellerStyles = StyleSheet.create({
   avatarImage: { width: '100%', height: '100%' },
   avatarInitial: { color: COLORS.navy, fontSize: 24, fontWeight: '700' },
   profileCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#858b99', fontSize: 8, fontWeight: '700', letterSpacing: 1 },
-  name: { marginTop: 5, color: COLORS.navy, fontSize: 21, fontWeight: '700' },
-  muted: { marginTop: 4, color: COLORS.muted, fontSize: 10, lineHeight: 16 },
-  bio: { marginTop: 9, color: COLORS.ink, fontSize: 11, lineHeight: 17 },
-  stats: { marginTop: 11, color: COLORS.goldDark, fontSize: 10, fontWeight: '700' },
+  eyebrow: { color: '#766b5f', fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
+  name: { marginTop: 5, color: COLORS.navy, fontSize: 23, fontWeight: '700' },
+  muted: { marginTop: 4, color: COLORS.muted, fontSize: 12, lineHeight: 18 },
+  bio: { marginTop: 9, color: COLORS.ink, fontSize: 13, lineHeight: 19 },
+  stats: { marginTop: 11, color: COLORS.goldDark, fontSize: 12, fontWeight: '700' },
   sectionHeading: { marginTop: 27, marginBottom: 11 },
   sectionTitle: { marginTop: 4, color: COLORS.navy, fontSize: 17, fontWeight: '700' },
   listingCard: { flexDirection: 'row', overflow: 'hidden', marginBottom: 9, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
@@ -298,24 +294,24 @@ const sellerStyles = StyleSheet.create({
   listingPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0eee4' },
   listingPlaceholderText: { color: COLORS.goldDark, fontSize: 27 },
   listingCopy: { flex: 1, justifyContent: 'center', gap: 3, paddingHorizontal: 11 },
-  listingTitle: { color: COLORS.navy, fontSize: 12, fontWeight: '700' },
-  listingPrice: { marginTop: 4, color: COLORS.navy, fontSize: 12, fontWeight: '700' },
-  emptyMessage: { padding: 15, borderWidth: 1, borderColor: COLORS.line, borderRadius: 9, backgroundColor: COLORS.white, color: COLORS.muted, fontSize: 11 },
+  listingTitle: { color: COLORS.navy, fontSize: 14, fontWeight: '700' },
+  listingPrice: { marginTop: 4, color: COLORS.navy, fontSize: 14, fontWeight: '700' },
+  emptyMessage: { padding: 15, borderWidth: 1, borderColor: COLORS.line, borderRadius: 9, backgroundColor: COLORS.white, color: COLORS.muted, fontSize: 13 },
   reviewForm: { padding: 15, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
   formTitle: { color: COLORS.navy, fontSize: 15, fontWeight: '700' },
-  fieldLabel: { marginTop: 13, marginBottom: 6, color: COLORS.ink, fontSize: 10, fontWeight: '700' },
+  fieldLabel: { marginTop: 13, marginBottom: 6, color: COLORS.ink, fontSize: 13, fontWeight: '700' },
   stars: { flexDirection: 'row', gap: 7 },
-  starButton: { paddingVertical: 3, paddingRight: 4 },
+  starButton: { paddingVertical: 8, paddingRight: 6 },
   star: { color: '#d7d4ca', fontSize: 28 },
   starSelected: { color: '#c68e21' },
-  reviewInput: { minHeight: 100, padding: 11, borderWidth: 1, borderColor: COLORS.line, borderRadius: 8, color: COLORS.ink, fontSize: 11, lineHeight: 17 },
-  error: { marginTop: 8, color: '#a13d31', fontSize: 10 },
-  notice: { marginTop: 8, color: COLORS.green, fontSize: 10 },
+  reviewInput: { minHeight: 100, padding: 11, borderWidth: 1, borderColor: COLORS.line, borderRadius: 8, color: COLORS.ink, fontSize: 15, lineHeight: 21 },
+  error: { marginTop: 8, color: '#a13d31', fontSize: 12 },
+  notice: { marginTop: 8, color: COLORS.green, fontSize: 12 },
   disabledButton: { opacity: 0.55 },
   reviewCard: { marginTop: 9, padding: 14, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
   reviewHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  reviewName: { color: COLORS.navy, fontSize: 11, fontWeight: '700' },
+  reviewName: { color: COLORS.navy, fontSize: 13, fontWeight: '700' },
   reviewStars: { marginTop: 7, color: '#c68e21', fontSize: 15, letterSpacing: 1 },
-  reviewBody: { marginTop: 6, color: COLORS.ink, fontSize: 11, lineHeight: 17 },
-  disclaimer: { marginTop: 12, color: COLORS.muted, fontSize: 9, lineHeight: 15 },
+  reviewBody: { marginTop: 6, color: COLORS.ink, fontSize: 13, lineHeight: 19 },
+  disclaimer: { marginTop: 12, color: COLORS.muted, fontSize: 11, lineHeight: 17 },
 });

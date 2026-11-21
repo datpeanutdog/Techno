@@ -34,51 +34,49 @@
                     </button>
                 </div>
 
-                <p class="sidebar-section-label">Marketplace</p>
+                @auth
+                    <a class="sidebar-profile-link" href="{{ route('profile.edit') }}" @if (request()->routeIs('profile.edit')) aria-current="page" @endif>
+                        @if (auth()->user()->avatar_url)
+                            <img class="sidebar-profile-avatar" src="{{ auth()->user()->avatar_url }}" alt="" aria-hidden="true">
+                        @else
+                            <span class="sidebar-profile-avatar sidebar-profile-initial" aria-hidden="true">{{ Illuminate\Support\Str::upper(Illuminate\Support\Str::substr(auth()->user()->name, 0, 1)) }}</span>
+                        @endif
+                        <span class="sidebar-profile-name">{{ auth()->user()->name }}</span>
+                    </a>
+                @endauth
+
                 <nav class="main-nav" aria-label="Main navigation">
-<<<<<<< Updated upstream
-                    <a class="{{ request()->routeIs('marketplace.index') && request('mode') !== 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'sale']) }}#discover" @if (request()->routeIs('marketplace.index') && request('mode') !== 'rent') aria-current="page" @endif>
-                        <span class="sidebar-nav-icon" aria-hidden="true">⌕</span><span>Buy</span>
-                    </a>
-                    <a class="{{ request()->routeIs('marketplace.index') && request('mode') === 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'rent']) }}#discover" @if (request()->routeIs('marketplace.index') && request('mode') === 'rent') aria-current="page" @endif>
-                        <span class="sidebar-nav-icon" aria-hidden="true">↗</span><span>Rent</span>
-                    </a>
-                    <a class="{{ request()->routeIs('listings.create') ? 'is-active' : '' }}" href="{{ route('listings.create') }}" @if (request()->routeIs('listings.create')) aria-current="page" @endif>
-                        <span class="sidebar-nav-icon" aria-hidden="true">＋</span><span>Sell</span>
-=======
                     <a class="{{ request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') !== 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'sale']) }}#discover" @if (request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') !== 'rent') aria-current="page" @endif>
                         <span>Buy</span>
                     </a>
                     <a class="{{ request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'rent']) }}#discover" @if (request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent') aria-current="page" @endif>
                         <span>Rent</span>
->>>>>>> Stashed changes
                     </a>
-                    <a class="{{ request()->routeIs('marketplace.index') && request('view') === 'saved' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['view' => 'saved']) }}#discover" data-saved-link @if (request()->routeIs('marketplace.index') && request('view') === 'saved') aria-current="page" @endif>
-                        <span>Save for later</span>
-                    </a>
+                    @if (request()->routeIs('marketplace.index'))
+                        <a class="{{ request('view') === 'saved' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['view' => 'saved']) }}#discover" data-saved-link @if (request('view') === 'saved') aria-current="page" @endif>
+                            <span>Save for later</span>
+                        </a>
+                    @endif
                 </nav>
 
                 @auth
                     <p class="sidebar-section-label">Your account</p>
                     <nav class="account-nav" aria-label="Account navigation">
+                        <a href="{{ route('my-listings') }}" @if (request()->routeIs('my-listings')) aria-current="page" @endif>
+                            <span>Manage Listing</span>
+                        </a>
                         <a href="{{ route('conversations.index') }}" @if (request()->routeIs('conversations.*')) aria-current="page" @endif>
-                            <span class="sidebar-nav-icon" aria-hidden="true">✉</span><span>Messages</span>
+                            <span>Message</span>
                         </a>
                         <a class="support-nav-link" href="{{ route('support.reports.mine') }}" @if (request()->routeIs('support.reports.*')) aria-current="page" @endif>
-                            <span class="sidebar-nav-icon" aria-hidden="true">?</span><span>Support</span>
-                        </a>
-                        <a href="{{ route('profile.edit') }}" @if (request()->routeIs('profile.edit')) aria-current="page" @endif>
-                            <span class="sidebar-nav-icon" aria-hidden="true">☺</span><span>{{ auth()->user()->name }}</span>
-                        </a>
-                        <a href="{{ route('my-listings') }}" @if (request()->routeIs('my-listings')) aria-current="page" @endif>
-                            <span class="sidebar-nav-icon" aria-hidden="true">▤</span><span>My listings</span>
+                            <span>Support</span>
                         </a>
                         @if (auth()->user()->isAdmin())
                             <a href="{{ route('admin.support-reports.index') }}" @if (request()->routeIs('admin.support-reports.*')) aria-current="page" @endif>
-                                <span class="sidebar-nav-icon" aria-hidden="true">⚙</span><span>Admin</span>
+                                <span>Admin</span>
                             </a>
                             <a href="{{ route('admin.suspension-appeals.index') }}" @if (request()->routeIs('admin.suspension-appeals.*')) aria-current="page" @endif>
-                                <span class="sidebar-nav-icon" aria-hidden="true">⚖</span><span>Appeals</span>
+                                <span>Appeals</span>
                             </a>
                         @endif
                     </nav>
@@ -86,10 +84,9 @@
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button class="sidebar-logout-button" type="submit">
-                                <span class="sidebar-nav-icon" aria-hidden="true">⇥</span><span>Log out</span>
+                                <span>Log out</span>
                             </button>
                         </form>
-                        <p class="sidebar-caption">PASABUY · YOUR CAMPUS COMMUNITY</p>
                     </div>
                 @endauth
 
@@ -97,10 +94,9 @@
                     <div class="sidebar-footer">
                         <p class="sidebar-section-label">Welcome</p>
                         <nav class="account-nav" aria-label="Account navigation">
-                            <a href="{{ route('login') }}"><span class="sidebar-nav-icon" aria-hidden="true">⇥</span><span>Log in</span></a>
-                            <a class="account-register" href="{{ route('register') }}"><span class="sidebar-nav-icon" aria-hidden="true">＋</span><span>Join PASABUY</span></a>
+                            <a href="{{ route('login') }}"><span>Log in</span></a>
+                            <a class="account-register" href="{{ route('register') }}"><span>Join PASABUY</span></a>
                         </nav>
-                        <p class="sidebar-caption">PASABUY · YOUR CAMPUS COMMUNITY</p>
                     </div>
                 @endguest
             </aside>
@@ -108,11 +104,6 @@
         @endif
 
         <div class="site-content">
-            <div class="announcement-bar">
-                <span>Good school finds deserve a second semester.</span>
-                <span class="announcement-location"><span aria-hidden="true">✦</span> Made for student life</span>
-            </div>
-
             <header class="site-header">
                 <div class="header-inner">
                     <a class="brand header-brand" href="{{ route('marketplace.index') }}" aria-label="PASABUY home">
@@ -131,7 +122,7 @@
                                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </button>
-                        @unless (request()->routeIs('marketplace.index', 'conversations.*', 'support.reports.*', 'my-listings'))
+                        @unless (request()->routeIs('marketplace.index', 'conversations.*', 'my-listings', 'profile.*', 'support.reports.*'))
                             <a class="button button-navy header-sell" href="{{ route('listings.create') }}">
                                 <span aria-hidden="true">＋</span> List an item
                             </a>
@@ -152,18 +143,6 @@
                 @yield('content')
             </main>
 
-            @unless ($isLandingPage)
-                <footer class="site-footer">
-                    <div class="footer-inner">
-                        <a class="brand footer-brand" href="{{ route('marketplace.index') }}">
-                            <span class="brand-mark" aria-hidden="true">✳</span>
-                            <span class="brand-word">pasa<span>buy</span></span>
-                        </a>
-                        <p>Good finds, shared by students like you.</p>
-                        <span class="footer-note">Buy · sell · rent · pass it on</span>
-                    </div>
-                </footer>
-            @endunless
         </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

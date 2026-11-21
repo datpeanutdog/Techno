@@ -111,11 +111,7 @@ export default function NewMessageScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={appStyles.safeArea}>
       <View style={appStyles.app}>
-        <StatusBar style="light" />
-        <View style={appStyles.topBar}>
-          <Text style={appStyles.topBarText}>✳  START A CONVERSATION</Text>
-          <Text style={appStyles.topBarLocation}>MESSAGE SELLER</Text>
-        </View>
+        <StatusBar style="dark" />
         <View style={appStyles.header}>
           <Pressable onPress={() => router.back()} style={appStyles.backButton}>
             <Text style={appStyles.backButtonText}>‹  Back</Text>
@@ -185,7 +181,7 @@ const screenStyles = StyleSheet.create({
     borderRadius: 13,
     backgroundColor: COLORS.white,
   },
-  eyebrow: { color: COLORS.muted, fontSize: 9, fontWeight: '700', letterSpacing: 1 },
+  eyebrow: { color: COLORS.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
   listingTitle: { marginTop: 5, color: COLORS.navy, fontSize: 16, fontWeight: '700' },
   listingSubline: { marginTop: 4, color: COLORS.muted, fontSize: 12 },
   prompt: { marginTop: 22, marginBottom: 9, color: COLORS.navy, fontSize: 14, fontWeight: '700' },
@@ -200,5 +196,5 @@ const screenStyles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  hint: { marginTop: 8, marginBottom: 16, color: COLORS.muted, fontSize: 11, lineHeight: 16 },
+  hint: { marginTop: 8, marginBottom: 16, color: COLORS.muted, fontSize: 13, lineHeight: 19 },
 });

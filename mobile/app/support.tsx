@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -189,10 +190,7 @@ export default function SupportScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-        <View style={styles.topBar}>
-          <Text style={styles.topBarText}>✳  PASABUY CUSTOMER SERVICE</Text>
-          <Text style={styles.topBarLocation}>REPORTS & HELP</Text>
-        </View>
+        <StatusBar style="dark" />
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backButtonText}>‹  Back</Text>
@@ -260,7 +258,7 @@ export default function SupportScreen() {
                       <Pressable
                         accessibilityLabel={`Remove proof image ${index + 1}`}
                         onPress={() => setProofs((current) => current.filter((_, proofIndex) => proofIndex !== index))}
-                        style={{ position: 'absolute', top: -6, right: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.navy, alignItems: 'center', justifyContent: 'center' }}
+                        style={{ position: 'absolute', top: -8, right: -8, width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.navy, alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Text style={{ color: '#fff', fontWeight: '700' }}>×</Text>
                       </Pressable>
