@@ -12,8 +12,23 @@ class ExampleTest extends TestCase
     /**
      * The PASABUY homepage renders successfully.
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_the_application_shows_the_public_welcome_page(): void
     {
-        $this->get('/')->assertOk()->assertSee('Search campus listings');
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('USTP student marketplace')
+            ->assertSee('Create your account')
+            ->assertSee('name="password_confirmation"', false)
+            ->assertSee(route('marketplace.index', ['panel' => 'login']), false)
+            ->assertDontSee('Good finds, shared by students like you.')
+            ->assertDontSee('Search campus listings');
+
+        $this->get('/?panel=login')
+            ->assertOk()
+            ->assertSee('Welcome back')
+            ->assertSee('action="'.route('login').'"', false)
+            ->assertSee(route('support.reports.index'), false)
+            ->assertSee('Contact support')
+            ->assertDontSee('name="password_confirmation"', false);
     }
 }

@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -259,10 +260,7 @@ export default function AccountScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-        <View style={styles.topBar}>
-          <Text style={styles.topBarText}>✳  YOUR PASABUY ACCOUNT</Text>
-          <Text style={styles.topBarLocation}>CAMPUS COMMUNITY</Text>
-        </View>
+        <StatusBar style="dark" />
         <View style={styles.header}>
           {user ? (
             <>
@@ -280,7 +278,6 @@ export default function AccountScreen() {
                 </View>
                 <View>
                   <Text style={styles.brandName}>pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
-                  <Text style={styles.brandCaption}>YOUR CAMPUS MARKETPLACE</Text>
                 </View>
               </View>
               <MenuButton />

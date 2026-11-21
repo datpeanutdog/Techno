@@ -16,10 +16,27 @@ use Laravel\Sanctum\HasApiTokens;
 #[Hidden(['password', 'remember_token', 'avatar_path'])]
 class User extends Authenticatable
 {
+    public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_USER = 'user';
+
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $appends = ['avatar_url'];
+
+    protected $attributes = [
+        'role' => self::ROLE_USER,
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if ($user->email && in_array(Str::lower($user->email), config('app.admin_emails', []), true)) {
+                $user->role = self::ROLE_ADMIN;
+            }
+        });
+    }
 
     public function listings(): HasMany
     {
@@ -63,11 +80,7 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return in_array(
-            Str::lower($this->email),
-            config('app.admin_emails', []),
-            true,
-        );
+        return $this->role === self::ROLE_ADMIN;
     }
 
     public function isSuspended(): bool

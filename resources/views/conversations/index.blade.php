@@ -10,7 +10,6 @@
                 <h1>Your messages</h1>
                 <p class="auth-intro">Private conversations about the school finds you’re buying or renting.</p>
             </div>
-            <a class="button button-navy" href="{{ route('marketplace.index') }}#discover">Find a school-day save <span aria-hidden="true">→</span></a>
         </div>
 
         @if ($conversations->isNotEmpty())

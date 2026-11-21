@@ -36,7 +36,7 @@ class AccountTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'jamie@example.test']);
 
-        $this->get('/')->assertOk()->assertSee('Search campus listings');
+        $this->get('/')->assertOk()->assertSee('Create your account');
         $this->post('/login', [
             'email' => $user->email,
             'password' => 'password',
@@ -100,6 +100,25 @@ class AccountTest extends TestCase
             'category' => 'Books & Notes',
             'location' => 'Main campus',
         ])->assertCreated();
+    }
+
+    public function test_mobile_registration_cannot_assign_an_admin_role(): void
+    {
+        config(['app.admin_emails' => []]);
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Jamie Lee',
+            'email' => 'jamie@example.test',
+            'password' => 'Correct-Horse-123!',
+            'password_confirmation' => 'Correct-Horse-123!',
+            'role' => User::ROLE_ADMIN,
+        ])->assertCreated()
+            ->assertJsonPath('data.role', User::ROLE_USER);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'jamie@example.test',
+            'role' => User::ROLE_USER,
+        ]);
     }
 
     public function test_mobile_login_issues_a_token_and_logout_revokes_it(): void

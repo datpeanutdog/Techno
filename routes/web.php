@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\SupportReportController as AdminSupportReportController;
 use App\Http\Controllers\Admin\SuspensionAppealController as AdminSuspensionAppealController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\MessageController;
@@ -23,7 +24,14 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
-Route::get('/sellers/{user}', [SellerController::class, 'show'])->name('sellers.show');
+Route::get('/support', [SupportReportController::class, 'index'])->name('support.reports.index');
+Route::post('/support', [SupportReportController::class, 'storeContact'])
+    ->middleware('throttle:5,1')
+    ->name('support.reports.contact.store');
+
+Route::middleware('auth')->group(function (): void {
+    Route::get('/sellers/{user}', [SellerController::class, 'show'])->name('sellers.show');
+});
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
@@ -36,6 +44,14 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::middleware(['auth', 'account.active'])->group(function (): void {
+    Route::prefix('/admin/users')
+        ->name('admin.users.')
+        ->middleware('can:manage-users')
+        ->group(function (): void {
+            Route::get('/', [AdminUserController::class, 'index'])->name('index');
+            Route::patch('/{user}/role', [AdminUserController::class, 'updateRole'])->name('role.update');
+        });
+
     Route::post('/sellers/{user}/reviews', [SellerController::class, 'review'])
         ->middleware('throttle:5,1')
         ->name('sellers.reviews.store');
@@ -94,4 +110,6 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
         });
 });
 
-Route::get('/listings/{listing:slug}', [MarketplaceController::class, 'show'])->name('listings.show');
+Route::get('/listings/{listing:slug}', [MarketplaceController::class, 'show'])
+    ->middleware('auth')
+    ->name('listings.show');

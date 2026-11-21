@@ -23,9 +23,9 @@ class AdminSupportReportTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_allowlisted_admin_can_review_report_details(): void
+    public function test_admin_can_review_report_details(): void
     {
-        $admin = User::factory()->create(['email' => 'moderator@example.test']);
+        $admin = User::factory()->admin()->create(['email' => 'moderator@example.test']);
         $reporter = User::factory()->create();
         $reportedUser = User::factory()->create();
         $report = SupportReport::create([
@@ -36,8 +36,6 @@ class AdminSupportReportTest extends TestCase
             'proof_paths' => [],
             'status' => 'pending',
         ]);
-        config(['app.admin_emails' => [$admin->email]]);
-
         $this->actingAs($admin)
             ->get(route('admin.support-reports.index'))
             ->assertOk()
@@ -52,7 +50,7 @@ class AdminSupportReportTest extends TestCase
 
     public function test_admin_can_suspend_reported_account_and_revoke_mobile_tokens(): void
     {
-        $admin = User::factory()->create(['email' => 'moderator@example.test']);
+        $admin = User::factory()->admin()->create(['email' => 'moderator@example.test']);
         $reporter = User::factory()->create();
         $reportedUser = User::factory()->create();
         $report = SupportReport::create([
@@ -64,8 +62,6 @@ class AdminSupportReportTest extends TestCase
             'status' => 'pending',
         ]);
         $token = $reportedUser->createToken('test-device')->plainTextToken;
-        config(['app.admin_emails' => [$admin->email]]);
-
         $this->actingAs($admin)->post(route('admin.support-reports.suspend', $report))
             ->assertRedirect();
 
@@ -92,7 +88,7 @@ class AdminSupportReportTest extends TestCase
     {
         Storage::fake('local');
         $proofPath = $this->proofImage('proof.png')->store('support-reports', 'local');
-        $admin = User::factory()->create(['email' => 'moderator@example.test']);
+        $admin = User::factory()->admin()->create(['email' => 'moderator@example.test']);
         $reporter = User::factory()->create();
         $reportedUser = User::factory()->create();
         $report = SupportReport::create([
@@ -103,8 +99,6 @@ class AdminSupportReportTest extends TestCase
             'proof_paths' => [$proofPath],
             'status' => 'pending',
         ]);
-        config(['app.admin_emails' => [$admin->email]]);
-
         $this->actingAs($reporter)
             ->get(route('support.reports.proofs', [$report, 0]))
             ->assertOk();
@@ -120,7 +114,7 @@ class AdminSupportReportTest extends TestCase
 
     public function test_admin_can_restore_a_suspended_account(): void
     {
-        $admin = User::factory()->create(['email' => 'moderator@example.test']);
+        $admin = User::factory()->admin()->create(['email' => 'moderator@example.test']);
         $reportedUser = User::factory()->create([
             'suspended_at' => now(),
             'suspension_reason' => 'Repeated scams.',
@@ -132,8 +126,6 @@ class AdminSupportReportTest extends TestCase
             'proof_paths' => [],
             'status' => 'resolved',
         ]);
-        config(['app.admin_emails' => [$admin->email]]);
-
         $this->actingAs($admin)->post(route('admin.support-reports.restore', $report))
             ->assertRedirect();
 

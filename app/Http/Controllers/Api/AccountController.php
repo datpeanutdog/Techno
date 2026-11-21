@@ -127,7 +127,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @return array{id: int, account_identifier: string, name: string, email: string, bio: ?string, campus: ?string, avatar_url: ?string}
+     * @return array{id: int, account_identifier: string, name: string, email: string, role: string, bio: ?string, campus: ?string, avatar_url: ?string}
      */
     private function userPayload(User $user): array
     {
@@ -136,6 +136,7 @@ class AccountController extends Controller
             'account_identifier' => $user->account_identifier,
             'name' => $user->name,
             'email' => $user->email,
+            'role' => $user->role,
             'bio' => $user->bio,
             'campus' => $user->campus,
             'avatar_url' => $user->avatar_url,

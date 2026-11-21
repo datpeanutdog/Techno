@@ -32,6 +32,13 @@ class UserFactory extends Factory
         ];
     }
 
+    public function admin(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $user->forceFill(['role' => User::ROLE_ADMIN])->save();
+        });
+    }
+
     /**
      * Indicate that the model's email address should be unverified.
      */

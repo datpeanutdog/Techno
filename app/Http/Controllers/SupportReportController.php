@@ -10,17 +10,52 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SupportReportController extends Controller
 {
+    public function index(Request $request): View|RedirectResponse
+    {
+        if ($request->user()) {
+            return redirect()->route('support.reports.mine');
+        }
+
+        return view('support.reports.contact');
+    }
+
     public function create(Request $request): View
     {
         return view('support.reports.create', [
-            'categories' => SupportReport::CATEGORIES,
+            'categories' => array_intersect_key(
+                SupportReport::CATEGORIES,
+                array_flip(SupportReport::REPORT_CATEGORIES),
+            ),
             'reportedUser' => User::query()->find($request->integer('reported_user_id')),
         ]);
+    }
+
+    public function storeContact(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'contact_name' => ['required', 'string', 'max:60'],
+            'contact_email' => ['required', 'email', 'max:255'],
+            'category' => ['required', Rule::in(array_keys(SupportReport::CONTACT_CATEGORIES))],
+            'details' => ['required', 'string', 'max:5000'],
+        ]);
+
+        SupportReport::create([
+            'contact_name' => $data['contact_name'],
+            'contact_email' => $data['contact_email'],
+            'category' => $data['category'],
+            'details' => $data['details'],
+            'proof_paths' => [],
+            'status' => 'pending',
+        ]);
+
+        return redirect()->route('support.reports.index')
+            ->with('status', 'Your message has been sent to customer support. The team can reach you at the email address you provided.');
     }
 
     public function store(

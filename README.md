@@ -21,6 +21,8 @@ Open [http://localhost:8000](http://localhost:8000).
 To keep the CSS and JavaScript rebuilding during development, run `npm run dev` in a second terminal.
 Run `npm test` to execute the Laravel feature tests.
 
+Set `ADMIN_EMAILS` in `.env` to a comma-separated list of trusted administrator email addresses when bootstrapping the app. Existing matching accounts are promoted when migrations run, and newly registered matching accounts receive the admin role. Other accounts default to the user role. Administrators can assign or remove admin access from the **Users** page in the admin panel.
+
 ## Expo Go mobile app
 
 The Expo app in `mobile/` uses the same Laravel backend. Login or registration is the first screen; after signing in, students can browse, search, rent, save favorites, open listing details, and post school-related items.

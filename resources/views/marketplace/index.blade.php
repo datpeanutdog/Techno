@@ -3,17 +3,30 @@
 @section('title', 'PASABUY — your campus marketplace')
 
 @section('content')
-    <section class="discover-section" id="discover">
+    <section class="discover-section {{ $isSavedView ? 'saved-only-section' : '' }}" id="discover">
+        @if ($isSavedView)
+            <header class="saved-view-heading" data-saved-view data-favorites="{{ implode(',', $favoriteIds) }}">
+                <span class="saved-view-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M6.75 3.75h10.5A1.75 1.75 0 0 1 19 5.5v15l-7-4.5-7 4.5v-15a1.75 1.75 0 0 1 1.75-1.75Z"/>
+                    </svg>
+                </span>
+                <span class="saved-view-copy">
+                    <h1>Save for later</h1>
+                    <p>{{ $listings->total() }} {{ $listings->total() === 1 ? 'listing' : 'listings' }} saved on this device.</p>
+                </span>
+            </header>
+        @endif
+
+        @unless ($isSavedView)
         <div class="section-heading">
             <div>
-                <p class="eyebrow eyebrow-small">A good place to start</p>
                 <h2>Find your kind of <span>campus essential.</span></h2>
             </div>
-            <p class="section-aside">The next student who needs it could be right around the corner.</p>
         </div>
 
         <form class="marketplace-filter-bar" method="GET" action="{{ route('marketplace.index') }}" aria-label="Search and filter campus listings">
-            @foreach (['mode', 'location', 'sort'] as $filter)
+            @foreach (['mode', 'location', 'sort', 'view', 'favorites'] as $filter)
                 @if (request($filter)) <input type="hidden" name="{{ $filter }}" value="{{ request($filter) }}"> @endif
             @endforeach
             <label class="marketplace-search">
@@ -33,11 +46,12 @@
 
         <div class="listings-heading">
             <div>
-                <p class="eyebrow eyebrow-small">{{ request('mode') === 'rent' ? 'Borrow it for class, keep your budget' : 'Passed on by students, ready for class' }}</p>
-                <h2>{{ request('mode') === 'rent' ? 'Things to rent for school.' : 'The latest campus finds.' }}</h2>
+                <a class="button button-navy listings-create-button" href="{{ route('listings.create') }}">
+                    <span aria-hidden="true">＋</span> List an item
+                </a>
             </div>
             <form class="sort-form" method="GET" action="{{ route('marketplace.index') }}">
-                @foreach (['q', 'location', 'mode', 'category'] as $filter)
+                @foreach (['q', 'location', 'mode', 'category', 'view', 'favorites'] as $filter)
                     @if (request($filter)) <input type="hidden" name="{{ $filter }}" value="{{ request($filter) }}"> @endif
                 @endforeach
                 <label for="sort">Sort by</label>
@@ -50,23 +64,32 @@
             </form>
         </div>
 
-        <nav class="market-tabs" aria-label="Browse sale and rental listings">
-            <a class="market-mode-tab {{ request('mode') !== 'rent' ? 'tab-active' : '' }}" href="{{ route('marketplace.index', array_filter(['category' => request('category'), 'q' => request('q'), 'location' => request('location')])) }}#discover" @if (request('mode') !== 'rent') aria-current="page" @endif>
-                <span class="market-mode-icon" aria-hidden="true">↗</span>
+        <nav class="market-tabs" aria-label="Browse buy and rent listings">
+            <a class="market-mode-tab {{ ! $isSavedView && request('mode') !== 'rent' ? 'tab-active' : '' }}" href="{{ route('marketplace.index', array_filter(['category' => request('category'), 'q' => request('q'), 'location' => request('location')])) }}#discover" @if (! $isSavedView && request('mode') !== 'rent') aria-current="page" @endif>
+                <span class="market-mode-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                        <path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h8.1a2 2 0 0 0 1.9-1.5L21.5 7H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="10" cy="19" r="1" fill="currentColor"/>
+                        <circle cx="18" cy="19" r="1" fill="currentColor"/>
+                    </svg>
+                </span>
                 <span class="market-mode-copy"><strong>Buy</strong><small>Find something to keep</small></span>
             </a>
-            <a class="market-mode-tab {{ request('mode') === 'rent' ? 'tab-active' : '' }}" href="{{ route('marketplace.index', array_filter(['mode' => 'rent', 'category' => request('category'), 'q' => request('q'), 'location' => request('location')])) }}#discover" @if (request('mode') === 'rent') aria-current="page" @endif>
+            <a class="market-mode-tab {{ ! $isSavedView && request('mode') === 'rent' ? 'tab-active' : '' }}" href="{{ route('marketplace.index', array_filter(['mode' => 'rent', 'category' => request('category'), 'q' => request('q'), 'location' => request('location')])) }}#discover" @if (! $isSavedView && request('mode') === 'rent') aria-current="page" @endif>
                 <span class="market-mode-icon market-mode-icon-rent" aria-hidden="true">↻</span>
                 <span class="market-mode-copy"><strong>Rent</strong><small>Borrow it for a while</small></span>
             </a>
-            <a class="market-sell-link" href="{{ route('listings.create') }}">List an item <span aria-hidden="true">＋</span></a>
         </nav>
+        @endunless
 
         @if (
-            (request('q') !== null && request('q') !== '')
-            || (request('location') !== null && request('location') !== '')
-            || (request('mode') !== null && request('mode') !== '')
-            || (request('category') !== null && request('category') !== '')
+            ! $isSavedView
+            && (
+                (request('q') !== null && request('q') !== '')
+                || (request('location') !== null && request('location') !== '')
+                || (request('mode') !== null && request('mode') !== '')
+                || (request('category') !== null && request('category') !== '')
+            )
         )
             <div class="active-filters">
                 <span>Showing {{ $listings->total() }} {{ $listings->total() === 1 ? 'campus find' : 'campus finds' }}</span>
@@ -88,13 +111,13 @@
                             </a>
                             <span class="listing-badge {{ $listing->type === 'rent' ? 'badge-rent' : '' }}">{{ $listing->type === 'rent' ? 'For rent' : 'For sale' }}</span>
                             <button class="favorite-button" type="button" data-favorite="{{ $listing->id }}" aria-label="Save {{ $listing->title }}" aria-pressed="false">
-                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"/></svg>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.75 3.75h10.5A1.75 1.75 0 0 1 19 5.5v15l-7-4.5-7 4.5v-15a1.75 1.75 0 0 1 1.75-1.75Z"/></svg>
                             </button>
                         </div>
                         <div class="listing-details">
                             <div class="listing-card-topline">
                                 <span class="listing-category">{{ $listing->category }}</span>
-                                @if ($listing->condition)<span class="listing-condition">{{ $listing->condition }}</span>@endif
+                                @if ($listing->condition)<span class="listing-condition condition-{{ Illuminate\Support\Str::slug($listing->condition) }}">{{ $listing->condition }}</span>@endif
                             </div>
                             <a class="listing-title" href="{{ route('listings.show', $listing) }}">{{ $listing->title }}</a>
                             <div class="listing-meta"><span aria-hidden="true">⌖</span> {{ $listing->location }}</div>
@@ -130,21 +153,20 @@
             <div class="pagination-wrap">{{ $listings->links() }}</div>
         @else
             <div class="empty-state">
-                <span class="empty-icon" aria-hidden="true">⌕</span>
-                <h3>No campus finds just yet.</h3>
-                <p>Try a different search or clear your filters. Your next school-day essential is out there.</p>
-                <a class="button button-navy" href="{{ route('marketplace.index') }}#discover">See all school finds</a>
+                <span class="empty-icon" aria-hidden="true">
+                    @if ($isSavedView)
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M6.75 3.75h10.5A1.75 1.75 0 0 1 19 5.5v15l-7-4.5-7 4.5v-15a1.75 1.75 0 0 1 1.75-1.75Z"/>
+                        </svg>
+                    @else
+                        ⌕
+                    @endif
+                </span>
+                <h3>{{ $isSavedView ? 'No saved items yet.' : 'No campus finds just yet.' }}</h3>
+                <p>{{ $isSavedView ? 'Bookmark a listing and it will be waiting here.' : 'Try a different search or clear your filters. Your next school-day essential is out there.' }}</p>
+                <a class="button button-navy" href="{{ route('marketplace.index') }}#discover">{{ $isSavedView ? 'Browse campus finds' : 'See all school finds' }}</a>
             </div>
         @endif
     </section>
 
-    <section class="sell-banner">
-        <div class="sell-banner-mark" aria-hidden="true">✳</div>
-        <div>
-            <p class="eyebrow">Good things travel campus to campus</p>
-            <h2>Finished the semester?<br>Pass your school finds on.</h2>
-            <p class="sell-banner-copy">Your books and supplies could be someone's next great start.</p>
-        </div>
-        <a class="button button-navy" href="{{ route('listings.create') }}">List a school find <span aria-hidden="true">→</span></a>
-    </section>
 @endsection

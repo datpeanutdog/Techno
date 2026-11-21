@@ -52,7 +52,18 @@ export const CATEGORY_ICONS: Record<string, string> = {
   'Campus Services': '✦',
 };
 
+export const CONDITION_TONES: Record<string, { backgroundColor: string; color: string }> = {
+  'Brand new': { backgroundColor: '#e6efe5', color: '#3d6244' },
+  'Like new': { backgroundColor: '#f6edd6', color: '#795b1a' },
+  Good: { backgroundColor: '#eee7d9', color: '#705a3d' },
+  Fair: { backgroundColor: '#f1e2d9', color: '#80503f' },
+};
+
 const DEFAULT_CATEGORIES = Object.keys(CATEGORY_ICONS);
+
+export function getConditionTone(condition: string) {
+  return CONDITION_TONES[condition] ?? CONDITION_TONES.Good;
+}
 
 export function formatMobilePrice(price: string | number) {
   return `₱${Number(price).toLocaleString('en-PH', {
@@ -129,7 +140,11 @@ function ListingCard({
       <Pressable onPress={onOpen} style={styles.cardContent}>
         <View style={styles.cardMetaRow}>
           <Text numberOfLines={1} style={styles.cardCategory}>{listing.category}</Text>
-          {listing.condition ? <Text style={styles.cardCondition}>{listing.condition}</Text> : null}
+          {listing.condition ? (
+            <View style={[styles.cardConditionBadge, { backgroundColor: getConditionTone(listing.condition).backgroundColor }]}>
+              <Text style={[styles.cardCondition, { color: getConditionTone(listing.condition).color }]}>{listing.condition}</Text>
+            </View>
+          ) : null}
         </View>
         <Text numberOfLines={2} style={styles.cardTitle}>{listing.title}</Text>
         <Text numberOfLines={1} style={styles.cardLocation}>⌖  {listing.location}</Text>
@@ -378,21 +393,8 @@ export default function App() {
             />
           </View>
 
-          <ScrollView contentContainerStyle={styles.categoryRow} horizontal showsHorizontalScrollIndicator={false}>
-            <ChoiceChip label="Everything" selected={selectedCategory === null} onPress={() => setSelectedCategory(null)} />
-            {categories.map((category) => (
-              <ChoiceChip
-                key={category}
-                label={`${CATEGORY_ICONS[category] ?? '✦'}  ${category}`}
-                selected={selectedCategory === category}
-                onPress={() => setSelectedCategory(category)}
-              />
-            ))}
-          </ScrollView>
-
           <View style={styles.sectionTitleRow}>
             <View>
-              <Text style={styles.sectionEyebrow}>{mode === 'rent' ? 'BORROW FOR CLASS' : 'STUDENT-TO-STUDENT'}</Text>
               <Text style={styles.sectionTitle}>
                 {mode === 'rent' ? 'Good things to rent' : 'Campus finds for you'}
               </Text>
@@ -412,7 +414,6 @@ export default function App() {
       ) : (
         <View style={styles.sectionTitleRow}>
           <View>
-            <Text style={styles.sectionEyebrow}>YOUR LITTLE WISHLIST</Text>
             <Text style={styles.sectionTitle}>Saved campus finds</Text>
           </View>
           <Text style={styles.savedCount}>{savedIds.length} saved</Text>
@@ -490,11 +491,7 @@ export default function App() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-      <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <Text style={styles.topBarText}>✳  GOOD FINDS, SECOND SEMESTERS</Text>
-        <Text style={styles.topBarLocation}>CAMPUS LIFE, SHARED</Text>
-      </View>
+      <StatusBar style="dark" />
 
       <View style={styles.header}>
         <Pressable
@@ -507,7 +504,6 @@ export default function App() {
           </View>
           <View>
             <Text style={styles.brandName}>pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
-            <Text style={styles.brandCaption}>YOUR CAMPUS MARKETPLACE</Text>
           </View>
         </Pressable>
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -540,7 +536,6 @@ export default function App() {
             </Text>
           </Pressable>
         ))}
-        <Text style={styles.modeTabTag}>STUDENT TO STUDENT</Text>
       </View>
 
       <View style={styles.pageHeading}>
@@ -619,30 +614,25 @@ export default function App() {
 
 export const styles = StyleSheet.create({
   app: { flex: 1, backgroundColor: COLORS.cream },
-  safeArea: { flex: 1, backgroundColor: COLORS.navyDeep },
+  safeArea: { flex: 1, backgroundColor: COLORS.cream },
   contentArea: { flex: 1 },
-  topBar: { height: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 17, backgroundColor: COLORS.navyDeep },
-  topBarText: { color: '#f4e7c8', fontSize: 8, fontWeight: '700', letterSpacing: 0.9 },
-  topBarLocation: { color: '#e5d6c8', fontSize: 7, fontWeight: '600', letterSpacing: 0.7 },
   header: { height: 68, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.white },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   brandIcon: { width: 35, height: 35, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: COLORS.navy },
   brandIconText: { color: COLORS.gold, fontSize: 20, fontWeight: '800' },
   brandName: { color: COLORS.navy, fontSize: 21, fontWeight: '800', letterSpacing: -1.3 },
   brandNameAccent: { color: COLORS.goldDark },
-  brandCaption: { marginTop: 1, color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 1 },
-  headerAddButton: { width: 37, height: 37, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: COLORS.gold },
+  headerAddButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: COLORS.gold },
   headerAddText: { color: COLORS.navy, fontSize: 23, fontWeight: '400', lineHeight: 27 },
   modeTabs: { minHeight: 60, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 17, backgroundColor: COLORS.cream },
-  modeTab: { minWidth: 65, minHeight: 38, alignItems: 'center', justifyContent: 'center', marginRight: 7, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
+  modeTab: { minWidth: 65, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginRight: 7, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
   modeTabActive: { borderWidth: 2, borderColor: '#c99a38', backgroundColor: COLORS.paleGold, elevation: 2, shadowColor: COLORS.navy, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4 },
   modeTabText: { color: COLORS.muted, fontSize: 12, fontWeight: '600' },
   modeTabTextActive: { color: COLORS.navy, fontWeight: '800' },
-  modeTabTag: { marginLeft: 'auto', alignSelf: 'center', color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 0.9 },
   pageHeading: { paddingHorizontal: 20, paddingTop: 17, paddingBottom: 12 },
   pageTitle: { color: COLORS.navy, fontSize: 19, fontWeight: '700', letterSpacing: -0.5 },
-  pageSubtitle: { marginTop: 4, color: COLORS.muted, fontSize: 10 },
-  headerRouteTitle: { color: COLORS.navy, fontSize: 12, fontWeight: '700' },
+  pageSubtitle: { marginTop: 4, color: COLORS.muted, fontSize: 12 },
+  headerRouteTitle: { color: COLORS.navy, fontSize: 15, fontWeight: '700' },
   routeHeaderSpacer: { width: 52 },
   pageScroll: { flex: 1 },
   mainScrollContent: { flexGrow: 1, paddingBottom: 10 },
@@ -652,113 +642,113 @@ export const styles = StyleSheet.create({
   locationBox: { minHeight: 40, marginTop: 8 },
   searchGlyph: { color: COLORS.goldDark, fontSize: 24, lineHeight: 28 },
   locationGlyph: { color: COLORS.muted, fontSize: 20 },
-  searchInput: { flex: 1, paddingVertical: 8, color: COLORS.ink, fontSize: 11 },
+  searchInput: { flex: 1, paddingVertical: 8, color: COLORS.ink, fontSize: 15 },
   clearSearch: { paddingHorizontal: 4, color: COLORS.muted, fontSize: 20 },
-  categoryFilterButton: { width: '42%', minHeight: 45, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: COLORS.line, borderRadius: 11, backgroundColor: COLORS.white },
+  categoryFilterButton: { width: '42%', minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: COLORS.line, borderRadius: 11, backgroundColor: COLORS.white },
   categoryFilterCopy: { flex: 1, minWidth: 0 },
-  categoryFilterLabel: { color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 0.6 },
-  categoryFilterValue: { marginTop: 2, color: COLORS.navy, fontSize: 10, fontWeight: '600' },
+  categoryFilterLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+  categoryFilterValue: { marginTop: 2, color: COLORS.navy, fontSize: 12, fontWeight: '600' },
   categoryFilterChevron: { color: COLORS.goldDark, fontSize: 18 },
   categoryRow: { gap: 7, paddingHorizontal: 17, paddingVertical: 12 },
-  choiceChip: { minHeight: 34, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.line, borderRadius: 18, backgroundColor: COLORS.white },
+  choiceChip: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderWidth: 1, borderColor: COLORS.line, borderRadius: 18, backgroundColor: COLORS.white },
   choiceChipSelected: { borderWidth: 2, borderColor: '#c99a38', backgroundColor: COLORS.paleGold },
-  choiceChipText: { color: COLORS.muted, fontSize: 9, fontWeight: '600' },
+  choiceChipText: { color: COLORS.muted, fontSize: 12, fontWeight: '600' },
   choiceChipTextSelected: { color: COLORS.navy, fontWeight: '700' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 18, marginTop: 4, marginBottom: 10 },
-  sectionEyebrow: { color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 1.15 },
-  sectionTitle: { marginTop: 3, color: COLORS.navy, fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
-  refreshButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
+  sectionTitle: { color: COLORS.navy, fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  refreshButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
   refreshIcon: { color: COLORS.navy, fontSize: 20 },
-  savedCount: { color: COLORS.muted, fontSize: 9 },
-  inlineNotice: { marginHorizontal: 18, marginBottom: 8, color: COLORS.green, fontSize: 10 },
+  savedCount: { color: COLORS.muted, fontSize: 12 },
+  inlineNotice: { marginHorizontal: 18, marginBottom: 8, color: COLORS.green, fontSize: 12 },
   listingGrid: { paddingHorizontal: 17, paddingBottom: 18 },
   listingRow: { flexDirection: 'row', gap: 11, marginBottom: 11 },
-  listingCard: { flex: 1, minWidth: 0, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, borderRadius: 11, backgroundColor: COLORS.white },
+  listingCard: { flex: 1, minWidth: 0, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, backgroundColor: COLORS.white, elevation: 1, shadowColor: COLORS.navy, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 5 },
   cardSpacer: { flex: 1 },
-  cardImageWrap: { height: 136, overflow: 'hidden', backgroundColor: COLORS.paleNeutral },
+  cardImageWrap: { height: 146, overflow: 'hidden', backgroundColor: COLORS.paleNeutral },
   cardImage: { width: '100%', height: '100%', objectFit: 'cover' },
   cardImagePlaceholder: { width: '100%', height: '100%' },
   imagePlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f2eddf' },
   placeholderIcon: { color: COLORS.goldDark, fontSize: 36 },
   typeBadge: { position: 'absolute', top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 5, borderRadius: 5, backgroundColor: COLORS.paleGold },
-  typeBadgeText: { color: '#77570f', fontSize: 7, fontWeight: '800', letterSpacing: 0.4 },
+  typeBadgeText: { color: '#77570f', fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
   rentBadge: { backgroundColor: COLORS.paleNeutral },
   rentBadgeText: { color: COLORS.navy },
-  favoriteButton: { position: 'absolute', top: 7, right: 7, width: 29, height: 29, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: '#fffdf8ed' },
+  favoriteButton: { position: 'absolute', top: 7, right: 7, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: '#fffdf8ed' },
   favoriteIcon: { color: COLORS.muted, fontSize: 18, lineHeight: 21 },
   favoriteIconSaved: { color: '#c9595f' },
   cardContent: { paddingHorizontal: 9, paddingTop: 9, paddingBottom: 9 },
   cardMetaRow: { minHeight: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
-  cardCategory: { flex: 1, color: COLORS.muted, fontSize: 7, fontWeight: '700', letterSpacing: 0.4 },
-  cardCondition: { color: COLORS.muted, fontSize: 7 },
-  cardTitle: { minHeight: 31, marginTop: 5, color: COLORS.ink, fontSize: 11, fontWeight: '700', lineHeight: 15 },
-  cardLocation: { marginTop: 4, color: COLORS.muted, fontSize: 8 },
+  cardCategory: { flex: 1, color: COLORS.muted, fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
+  cardConditionBadge: { flexShrink: 0, paddingHorizontal: 6, paddingVertical: 4, borderRadius: 10 },
+  cardCondition: { fontSize: 10, fontWeight: '700' },
+  cardTitle: { minHeight: 36, marginTop: 5, color: COLORS.ink, fontSize: 13, fontWeight: '700', lineHeight: 18 },
+  cardLocation: { marginTop: 4, color: COLORS.muted, fontSize: 11 },
   cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5, marginTop: 9, paddingTop: 7, borderTopWidth: 1, borderTopColor: COLORS.line },
   cardPrice: { flexShrink: 1, color: COLORS.navy, fontSize: 12, fontWeight: '800' },
-  pricePeriod: { color: COLORS.muted, fontSize: 8, fontWeight: '400' },
-  rating: { color: COLORS.muted, fontSize: 8 },
+  pricePeriod: { color: COLORS.muted, fontSize: 10, fontWeight: '400' },
+  rating: { color: COLORS.muted, fontSize: 10 },
   loadingState: { alignItems: 'center', gap: 9, paddingVertical: 48 },
-  helperText: { color: COLORS.muted, fontSize: 10 },
+  helperText: { color: COLORS.muted, fontSize: 12 },
   emptyState: { alignItems: 'center', paddingHorizontal: 30, paddingVertical: 43 },
   emptyIcon: { width: 46, height: 46, borderRadius: 24, backgroundColor: COLORS.paleGold, color: COLORS.goldDark, fontSize: 30, lineHeight: 46, textAlign: 'center' },
   emptyTitle: { marginTop: 13, color: COLORS.navy, fontSize: 15, fontWeight: '700', textAlign: 'center' },
-  emptyDescription: { marginTop: 7, color: COLORS.muted, fontSize: 10, lineHeight: 16, textAlign: 'center' },
-  primaryButton: { minHeight: 43, alignItems: 'center', justifyContent: 'center', marginTop: 15, paddingHorizontal: 20, borderRadius: 9, backgroundColor: COLORS.navy },
-  primaryButtonText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  emptyDescription: { marginTop: 7, color: COLORS.muted, fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  primaryButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 15, paddingHorizontal: 20, borderRadius: 9, backgroundColor: COLORS.navy },
+  primaryButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   disabledButton: { opacity: 0.65 },
   detailContent: { paddingHorizontal: 17, paddingBottom: 22 },
-  backButton: { alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 5 },
-  backButtonText: { color: COLORS.goldDark, fontSize: 10, fontWeight: '600' },
+  backButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginBottom: 6, paddingVertical: 5 },
+  backButtonText: { color: COLORS.goldDark, fontSize: 13, fontWeight: '600' },
   detailImage: { width: '100%', height: 255, borderRadius: 12, backgroundColor: COLORS.paleNeutral, objectFit: 'cover' },
   detailPanel: { paddingTop: 15 },
   detailTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  detailCategory: { color: COLORS.muted, fontSize: 8, fontWeight: '700', letterSpacing: 0.7 },
+  detailCategory: { color: COLORS.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   detailRentLabel: { color: COLORS.navy },
   detailTitle: { marginTop: 8, color: COLORS.navy, fontSize: 22, fontWeight: '700', letterSpacing: -0.7 },
-  detailPrice: { marginTop: 6, color: COLORS.goldDark, fontSize: 21, fontWeight: '800' },
-  detailLocation: { marginTop: 6, color: COLORS.muted, fontSize: 10 },
+  detailPrice: { marginTop: 6, color: COLORS.goldDark, fontSize: 23, fontWeight: '800' },
+  detailLocation: { marginTop: 6, color: COLORS.muted, fontSize: 13 },
   divider: { height: 1, marginVertical: 15, backgroundColor: COLORS.line },
-  detailHeading: { color: COLORS.ink, fontSize: 12, fontWeight: '700' },
-  detailDescription: { marginTop: 7, color: COLORS.muted, fontSize: 11, lineHeight: 18 },
-  conditionPill: { alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 14, backgroundColor: COLORS.paleGold, color: '#725516', fontSize: 9, fontWeight: '600' },
+  detailHeading: { color: COLORS.ink, fontSize: 15, fontWeight: '700' },
+  detailDescription: { marginTop: 7, color: COLORS.muted, fontSize: 14, lineHeight: 21 },
+  conditionPill: { alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 14 },
+  conditionPillText: { fontSize: 12, fontWeight: '700' },
   sellerCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 17, padding: 11, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10, backgroundColor: COLORS.white },
   sellerAvatar: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: COLORS.paleGold },
   sellerAvatarImage: { width: 36, height: 36, borderRadius: 20 },
-  sellerInitials: { color: COLORS.goldDark, fontSize: 10, fontWeight: '800' },
+  sellerInitials: { color: COLORS.goldDark, fontSize: 14, fontWeight: '800' },
   sellerCopy: { flex: 1 },
-  sellerName: { color: COLORS.ink, fontSize: 11, fontWeight: '700' },
-  sellerSubline: { marginTop: 3, color: COLORS.muted, fontSize: 8 },
+  sellerName: { color: COLORS.ink, fontSize: 14, fontWeight: '700' },
+  sellerSubline: { marginTop: 3, color: COLORS.muted, fontSize: 11 },
   detailHeart: { color: COLORS.muted, fontSize: 23 },
   safetyNote: { flexDirection: 'row', gap: 9, marginTop: 11, padding: 11, borderRadius: 9, backgroundColor: COLORS.paleGold },
   safetyIcon: { color: COLORS.goldDark, fontSize: 14 },
-  safetyText: { flex: 1, color: COLORS.muted, fontSize: 9, lineHeight: 15 },
+  safetyText: { flex: 1, color: COLORS.muted, fontSize: 12, lineHeight: 18 },
   sellContent: { paddingHorizontal: 17, paddingBottom: 25 },
   sellIntro: { paddingVertical: 7 },
   sellSparkle: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: COLORS.paleGold },
   sellSparkleText: { color: COLORS.goldDark, fontSize: 20 },
-  sellEyebrow: { marginTop: 11, color: COLORS.goldDark, fontSize: 8, fontWeight: '800', letterSpacing: 1 },
   sellTitle: { marginTop: 5, color: COLORS.navy, fontSize: 25, fontWeight: '700', letterSpacing: -0.8 },
   sellTitleAccent: { color: COLORS.goldDark, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontStyle: 'italic' },
-  sellDescription: { maxWidth: 340, marginTop: 5, color: COLORS.muted, fontSize: 10, lineHeight: 16 },
+  sellDescription: { maxWidth: 340, marginTop: 5, color: COLORS.muted, fontSize: 13, lineHeight: 19 },
   formCard: { marginTop: 13, padding: 15, borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, backgroundColor: COLORS.white },
-  formHeading: { color: COLORS.navy, fontSize: 15, fontWeight: '700' },
-  formSubheading: { marginTop: 4, color: COLORS.muted, fontSize: 9 },
-  fieldLabel: { marginTop: 13, marginBottom: 6, color: COLORS.navy, fontSize: 9, fontWeight: '700' },
+  formHeading: { color: COLORS.navy, fontSize: 18, fontWeight: '700' },
+  formSubheading: { marginTop: 4, color: COLORS.muted, fontSize: 12, lineHeight: 18 },
+  fieldLabel: { marginTop: 14, marginBottom: 7, color: COLORS.navy, fontSize: 13, fontWeight: '700' },
   required: { color: COLORS.goldDark },
-  formInput: { minHeight: 41, paddingHorizontal: 10, paddingVertical: 9, borderWidth: 1, borderColor: COLORS.line, borderRadius: 7, backgroundColor: COLORS.white, color: COLORS.ink, fontSize: 10 },
-  multilineInput: { minHeight: 78 },
+  formInput: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 11, borderWidth: 1, borderColor: COLORS.line, borderRadius: 8, backgroundColor: COLORS.white, color: COLORS.ink, fontSize: 16 },
+  multilineInput: { minHeight: 100 },
   segmentRow: { flexDirection: 'row', gap: 8 },
   formRow: { flexDirection: 'row', gap: 10 },
   formHalf: { flex: 1, minWidth: 0 },
-  priceInput: { minHeight: 41, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, borderWidth: 1, borderColor: COLORS.line, borderRadius: 7, backgroundColor: COLORS.white },
-  currencySign: { color: COLORS.goldDark, fontSize: 12 },
-  priceField: { flex: 1, paddingVertical: 8, color: COLORS.ink, fontSize: 10 },
+  priceInput: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, borderWidth: 1, borderColor: COLORS.line, borderRadius: 8, backgroundColor: COLORS.white },
+  currencySign: { color: COLORS.goldDark, fontSize: 16 },
+  priceField: { flex: 1, paddingVertical: 8, color: COLORS.ink, fontSize: 16 },
   periodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   formCategoryScroll: { marginRight: -15 },
   formCategoryRow: { flexDirection: 'row', gap: 6, paddingRight: 15 },
-  formError: { marginTop: 10, color: '#a34d3f', fontSize: 9, lineHeight: 14 },
+  formError: { marginTop: 10, color: '#a34d3f', fontSize: 12, lineHeight: 18 },
   postButton: { marginTop: 21 },
-  formFinePrint: { marginTop: 9, color: COLORS.muted, fontSize: 8, textAlign: 'center' },
+  formFinePrint: { marginTop: 9, color: COLORS.muted, fontSize: 11, lineHeight: 17, textAlign: 'center' },
   bottomBar: { minHeight: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: COLORS.cream },
   bottomTab: { flex: 1, minWidth: 0, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, backgroundColor: COLORS.white },
   bottomTabActive: { borderWidth: 2, borderColor: '#c99a38', backgroundColor: COLORS.paleGold },
@@ -767,7 +757,7 @@ export const styles = StyleSheet.create({
   bottomIcon: { color: COLORS.muted, fontSize: 19, lineHeight: 23 },
   bottomIconActive: { color: COLORS.navy },
   bottomIconSell: { color: COLORS.navy },
-  bottomLabel: { color: COLORS.muted, fontSize: 8, fontWeight: '600' },
+  bottomLabel: { color: COLORS.muted, fontSize: 11, fontWeight: '600' },
   bottomLabelActive: { color: COLORS.navy, fontWeight: '700' },
   bottomLabelSell: { color: COLORS.navy, fontWeight: '700' },
 });

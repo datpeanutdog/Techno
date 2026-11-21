@@ -15,13 +15,35 @@ class MarketplaceController extends Controller
 {
     public function index(Request $request): View
     {
+        if (! $request->user()) {
+            return view('landing');
+        }
+
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
             'location' => ['nullable', 'string', 'max:100'],
             'mode' => ['nullable', 'in:sale,rent'],
             'category' => ['nullable', 'in:'.implode(',', ListingCategories::ALL)],
             'sort' => ['nullable', 'in:latest,price_low,price_high'],
+            'view' => ['nullable', 'in:saved'],
+            'favorites' => [
+                'nullable',
+                'string',
+                'max:4000',
+                'regex:/\A[1-9][0-9]*(?:,[1-9][0-9]*)*\z/',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && count(explode(',', $value)) > 500) {
+                        $fail('You can view up to 500 saved finds at a time.');
+                    }
+                },
+            ],
         ]);
+
+        $isSavedView = ($filters['view'] ?? null) === 'saved';
+        $favoriteIds = isset($filters['favorites'])
+            ? array_values(array_unique(array_map('intval', explode(',', $filters['favorites']))))
+            : [];
+        sort($favoriteIds);
 
         $query = Listing::query()
             ->with(['user' => fn ($user) => $user
@@ -43,7 +65,12 @@ class MarketplaceController extends Controller
             $query->where('location', 'like', '%'.$filters['location'].'%');
         }
 
-        $query->where('type', $filters['mode'] ?? 'sale');
+        if ($isSavedView) {
+            $query->whereIn('id', $favoriteIds)
+                ->whereIn('type', ['sale', 'rent']);
+        } else {
+            $query->where('type', $filters['mode'] ?? 'sale');
+        }
 
         if (! empty($filters['category'])) {
             $query->where('category', $filters['category']);
@@ -58,6 +85,8 @@ class MarketplaceController extends Controller
         return view('marketplace.index', [
             'listings' => $query->paginate(8)->withQueryString(),
             'categories' => ListingCategories::ALL,
+            'isSavedView' => $isSavedView,
+            'favoriteIds' => $favoriteIds,
         ]);
     }
 

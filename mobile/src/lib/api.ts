@@ -9,6 +9,7 @@ export type UserProfile = {
   account_identifier: string;
   name: string;
   email: string;
+  role: 'admin' | 'user';
   bio: string | null;
   campus: string | null;
   avatar_url: string | null;

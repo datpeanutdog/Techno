@@ -24,7 +24,7 @@ class AdminSuspensionAppealTest extends TestCase
 
     public function test_admin_can_approve_appeal_and_restore_the_account(): void
     {
-        $admin = User::factory()->create(['email' => 'moderator@example.test']);
+        $admin = User::factory()->admin()->create(['email' => 'moderator@example.test']);
         $user = User::factory()->create([
             'suspended_at' => now(),
             'suspension_reason' => 'A reported transaction needs review.',
@@ -33,8 +33,6 @@ class AdminSuspensionAppealTest extends TestCase
             'user_id' => $user->id,
             'message' => 'I believe this suspension is a mistake. Please review my transaction details.',
         ]);
-        config(['app.admin_emails' => [$admin->email]]);
-
         $this->actingAs($admin)
             ->get(route('admin.suspension-appeals.index'))
             ->assertOk()
@@ -62,7 +60,7 @@ class AdminSuspensionAppealTest extends TestCase
 
     public function test_admin_can_deny_appeal_without_restoring_the_account(): void
     {
-        $admin = User::factory()->create(['email' => 'moderator@example.test']);
+        $admin = User::factory()->admin()->create(['email' => 'moderator@example.test']);
         $user = User::factory()->create([
             'suspended_at' => now(),
             'suspension_reason' => 'A reported transaction needs review.',
@@ -71,8 +69,6 @@ class AdminSuspensionAppealTest extends TestCase
             'user_id' => $user->id,
             'message' => 'I believe this suspension is a mistake. Please review my transaction details.',
         ]);
-        config(['app.admin_emails' => [$admin->email]]);
-
         $this->actingAs($admin)->patch(route('admin.suspension-appeals.update', $appeal), [
             'status' => 'denied',
             'admin_note' => 'The suspension remains in place.',
@@ -84,7 +80,7 @@ class AdminSuspensionAppealTest extends TestCase
 
     public function test_admin_can_separate_active_appeals_from_resolved_appeals(): void
     {
-        $admin = User::factory()->create(['email' => 'moderator@example.test']);
+        $admin = User::factory()->admin()->create(['email' => 'moderator@example.test']);
         $user = User::factory()->create(['suspended_at' => now()]);
         SuspensionAppeal::create([
             'user_id' => $user->id,
@@ -105,8 +101,6 @@ class AdminSuspensionAppealTest extends TestCase
             'message' => 'Resolved approved appeal.',
             'status' => 'approved',
         ]);
-        config(['app.admin_emails' => [$admin->email]]);
-
         $this->actingAs($admin)
             ->get(route('admin.suspension-appeals.index', ['tab' => 'active']))
             ->assertOk()
@@ -127,7 +121,7 @@ class AdminSuspensionAppealTest extends TestCase
     public function test_admin_can_review_counter_appeal_history_and_private_image(): void
     {
         Storage::fake('local');
-        $admin = User::factory()->create(['email' => 'moderator@example.test']);
+        $admin = User::factory()->admin()->create(['email' => 'moderator@example.test']);
         $user = User::factory()->create(['suspended_at' => now()]);
         $firstAppeal = SuspensionAppeal::create([
             'user_id' => $user->id,
@@ -142,8 +136,6 @@ class AdminSuspensionAppealTest extends TestCase
             'previous_appeal_id' => $firstAppeal->id,
             'proof_path' => $proofPath,
         ]);
-        config(['app.admin_emails' => [$admin->email]]);
-
         $this->actingAs($admin)
             ->get(route('admin.suspension-appeals.show', $counterAppeal))
             ->assertOk()

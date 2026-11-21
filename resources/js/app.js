@@ -1,6 +1,41 @@
 const favoriteKey = 'pasabuy:favorites';
 const toast = document.querySelector('#toast');
 
+const supportReportForm = document.querySelector('[data-support-report-form]');
+if (supportReportForm) {
+    const proofsInput = supportReportForm.querySelector('input[name="proofs[]"]');
+    const proofSizeError = supportReportForm.querySelector('[data-proof-size-error]');
+    const maxProofCount = 3;
+    const maxProofSize = 4 * 1024 * 1024;
+    const maxTotalProofSize = 12 * 1024 * 1024;
+
+    const validateProofSizes = () => {
+        const files = Array.from(proofsInput.files ?? []);
+        let error = '';
+
+        if (files.length > maxProofCount) {
+            error = 'Choose no more than 3 proof images.';
+        } else if (files.some((file) => file.size > maxProofSize)) {
+            error = 'Each proof image must be 4 MB or smaller.';
+        } else if (files.reduce((total, file) => total + file.size, 0) > maxTotalProofSize) {
+            error = 'Proof images must total 12 MB or less.';
+        }
+
+        proofSizeError.textContent = error;
+        proofSizeError.hidden = !error;
+        proofsInput.setCustomValidity(error);
+
+        return !error;
+    };
+
+    proofsInput.addEventListener('change', validateProofSizes);
+    supportReportForm.addEventListener('submit', (event) => {
+        if (!validateProofSizes()) {
+            event.preventDefault();
+        }
+    });
+}
+
 const liveThread = document.querySelector('[data-live-messages]');
 
 if (liveThread) {
@@ -140,9 +175,19 @@ if (liveThread) {
 }
 
 const savedFavorites = () => {
-    const stored = JSON.parse(window.localStorage.getItem(favoriteKey) || '[]');
+    try {
+        const stored = JSON.parse(window.localStorage.getItem(favoriteKey) || '[]');
 
-    return new Set(stored.map(String));
+        if (!Array.isArray(stored)) {
+            throw new TypeError('Saved listings must be stored as an array.');
+        }
+
+        return new Set(stored.map(String).filter((id) => /^[1-9]\d*$/.test(id)));
+    } catch (error) {
+        console.error('Unable to read saved listings from local storage.', error);
+
+        return new Set();
+    }
 };
 
 const updateFavoriteButtons = () => {
@@ -155,6 +200,7 @@ const updateFavoriteButtons = () => {
         button.setAttribute('aria-pressed', String(isSaved));
         button.setAttribute('aria-label', `${isSaved ? 'Remove' : 'Save'} ${listingName}`);
     });
+
 };
 
 const showToast = (message) => {
@@ -167,6 +213,27 @@ const showToast = (message) => {
 };
 
 updateFavoriteButtons();
+
+const savedLink = document.querySelector('[data-saved-link]');
+savedLink?.addEventListener('click', (event) => {
+    event.preventDefault();
+
+    const url = new URL(savedLink.href);
+    url.searchParams.set('favorites', [...savedFavorites()].sort((first, second) => Number(first) - Number(second)).join(','));
+    window.location.assign(url);
+});
+
+const savedView = document.querySelector('[data-saved-view]');
+if (savedView) {
+    const url = new URL(window.location.href);
+    const favorites = [...savedFavorites()].sort((first, second) => Number(first) - Number(second)).join(',');
+    const requestedFavorites = url.searchParams.get('favorites') || '';
+
+    if (requestedFavorites !== favorites) {
+        url.searchParams.set('favorites', favorites);
+        window.location.replace(url);
+    }
+}
 
 document.querySelectorAll('[data-favorite]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -181,6 +248,27 @@ document.querySelectorAll('[data-favorite]').forEach((button) => {
 
         window.localStorage.setItem(favoriteKey, JSON.stringify([...favorites]));
         updateFavoriteButtons();
+
+        if (wasSaved && savedView) {
+            button.closest('.listing-card')?.remove();
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('favorites', [...favorites].sort((first, second) => Number(first) - Number(second)).join(','));
+            window.history.replaceState(null, '', url);
+
+            document.querySelectorAll('.pagination-wrap a').forEach((link) => {
+                const pageUrl = new URL(link.href);
+                pageUrl.searchParams.set('favorites', [...favorites].sort((first, second) => Number(first) - Number(second)).join(','));
+                link.href = pageUrl;
+            });
+
+            if (!document.querySelector('.listing-grid .listing-card')) {
+                url.searchParams.delete('page');
+                window.location.assign(url);
+                return;
+            }
+        }
+
         showToast(wasSaved ? 'Removed from your saved finds.' : 'Saved for later. Good choice!');
     });
 });

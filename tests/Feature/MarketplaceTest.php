@@ -24,24 +24,68 @@ class MarketplaceTest extends TestCase
             ->assertSee('All categories')
             ->assertSee('Search')
             ->assertSee('Engineering calculus book set')
+            ->assertSee('class="listing-condition condition-good">Good</span>', false)
+            ->assertSee('M6.75 3.75h10.5', false)
             ->assertSee('Laptop for classes & projects')
             ->assertDontSee('Student lab coat')
-            ->assertSee('<nav class="market-tabs" aria-label="Browse sale and rental listings">', false)
+            ->assertSee('<nav class="market-tabs" aria-label="Browse buy and rent listings">', false)
             ->assertSee('market-mode-tab tab-active', false)
             ->assertSee('aria-current="page"', false)
             ->assertSee('>Buy<', false)
             ->assertSee('Find something to keep')
             ->assertSee('Borrow it for a while')
+            ->assertSee('List an item')
+            ->assertSee('<a class="button button-navy listings-create-button" href="'.route('listings.create').'">', false)
+            ->assertDontSee('class="button button-navy header-sell"', false)
+            ->assertDontSee('market-sell-link', false)
+            ->assertDontSee('Good finds, shared by students like you.')
+            ->assertDontSee('Buy · sell · rent · pass it on')
             ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Buy</span>'], false);
     }
 
-    public function test_sell_navigation_opens_listing_form_and_marks_sell_as_active(): void
+    public function test_sidebar_shows_profile_and_spaced_navigation_in_order(): void
     {
         $this->actingAs(User::factory()->create())->get(route('listings.create'))
             ->assertOk()
             ->assertSee('Post campus listing')
+            ->assertDontSee('Make campus life easier')
+            ->assertDontSee('Pass a school find')
             ->assertSee('<option value="hour"', false)
-            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Sell</span>'], false);
+            ->assertSee('List an item')
+            ->assertDontSee('>Sell</span>', false)
+            ->assertSee('<a class="sidebar-profile-link" href="'.route('profile.edit').'"', false)
+            ->assertSee('class="sidebar-profile-name"', false)
+            ->assertSeeInOrder([
+                'class="sidebar-profile-link"',
+                'class="sidebar-profile-avatar sidebar-profile-initial"',
+                'class="sidebar-profile-name"',
+                '>Buy</span>',
+                '>Rent</span>',
+                'Your account',
+                '>Manage Listing</span>',
+                '>Message</span>',
+                '>Support</span>',
+            ], false)
+            ->assertDontSee('<p class="sidebar-section-label">Marketplace</p>', false)
+            ->assertDontSee('data-saved-link', false);
+    }
+
+    public function test_header_listing_action_is_hidden_on_account_pages(): void
+    {
+        $user = User::factory()->create();
+
+        foreach ([
+            route('conversations.index'),
+            route('support.reports.mine'),
+            route('my-listings'),
+            route('profile.edit'),
+        ] as $page) {
+            $this->actingAs($user)->get($page)
+                ->assertOk()
+                ->assertDontSee('class="button button-navy header-sell"', false)
+                ->assertDontSee('Good finds, shared by students like you.')
+                ->assertDontSee('Buy · sell · rent · pass it on');
+        }
     }
 
     public function test_search_filters_listings_by_keyword_and_location(): void
@@ -67,6 +111,77 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('Engineering calculus book set');
     }
 
+    public function test_saved_marketplace_view_shows_only_requested_available_listings(): void
+    {
+        $seller = User::factory()->create();
+        $savedSale = $seller->listings()->create([
+            'title' => 'Saved sale item',
+            'description' => 'A sale listing saved by this browser.',
+            'price' => 100,
+            'type' => 'sale',
+            'category' => 'Books & Notes',
+            'location' => 'Main campus',
+            'seller_name' => $seller->name,
+            'seller_initials' => 'SS',
+        ]);
+        $savedRental = $seller->listings()->create([
+            'title' => 'Saved rental item',
+            'description' => 'A rental listing saved by this browser.',
+            'price' => 20,
+            'type' => 'rent',
+            'rent_period' => 'day',
+            'category' => 'Books & Notes',
+            'location' => 'Main campus',
+            'seller_name' => $seller->name,
+            'seller_initials' => 'SS',
+        ]);
+        $unsaved = $seller->listings()->create([
+            'title' => 'Unsaved marketplace item',
+            'description' => 'This listing was not saved.',
+            'price' => 50,
+            'type' => 'sale',
+            'category' => 'Books & Notes',
+            'location' => 'Main campus',
+            'seller_name' => $seller->name,
+            'seller_initials' => 'SS',
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get('/?view=saved&favorites='.$savedSale->id.','.$savedRental->id)
+            ->assertOk()
+            ->assertSee('<h1>Save for later</h1>', false)
+            ->assertSee('2 listings saved on this device.')
+            ->assertSee('data-saved-view', false)
+            ->assertSee('data-saved-link', false)
+            ->assertDontSee('Search campus listings')
+            ->assertDontSee('List an item')
+            ->assertDontSee('Browse buy and rent listings')
+            ->assertDontSee('Showing 2 campus finds')
+            ->assertSee('Saved sale item')
+            ->assertSee('Saved rental item')
+            ->assertDontSee('Unsaved marketplace item');
+    }
+
+    public function test_saved_marketplace_view_has_a_clean_empty_state(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get('/?view=saved')
+            ->assertOk()
+            ->assertSee('0 listings saved on this device.')
+            ->assertSee('No saved items yet.')
+            ->assertSee('Bookmark a listing and it will be waiting here.')
+            ->assertSee('Browse campus finds')
+            ->assertDontSee('Search campus listings')
+            ->assertDontSee('List an item');
+    }
+
+    public function test_saved_marketplace_view_rejects_malformed_favorite_ids(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get('/?view=saved&favorites=1%2Cinvalid')
+            ->assertSessionHasErrors('favorites');
+    }
+
     public function test_listing_detail_page_is_available(): void
     {
         $this->seed();
@@ -75,6 +190,7 @@ class MarketplaceTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('listings.show', $listing))
             ->assertOk()
             ->assertSee('Mika Santos')
+            ->assertSee('class="listing-condition condition-good">Good</span>', false)
             ->assertSee('About this campus find');
     }
 
@@ -171,20 +287,23 @@ class MarketplaceTest extends TestCase
         $this->post(route('listings.store'), [])->assertRedirect(route('login'));
     }
 
-    public function test_public_marketplace_is_the_first_page_after_login(): void
+    public function test_visitors_see_the_welcome_page_and_sign_in_is_required_for_browsing(): void
     {
         $this->seed();
         $user = User::factory()->create();
 
         $this->get('/')->assertOk()
-            ->assertSee('Search campus listings')
-            ->assertSee('Join PASABUY');
-        $this->get('/?mode=rent')->assertOk()->assertSee('Scientific calculator for exams');
+            ->assertSee('Create your account')
+            ->assertDontSee('Search campus listings')
+            ->assertDontSee('Engineering calculus book set');
+        $this->get('/?mode=rent')->assertOk()->assertDontSee('Scientific calculator for exams');
+        $this->get(route('listings.show', Listing::where('slug', 'engineering-calculus-books')->firstOrFail()))
+            ->assertRedirect(route('login'));
         $this->actingAs($user)->get('/')->assertOk()->assertSee('Search campus listings');
         $this->post('/logout')->assertRedirect(route('marketplace.index'));
     }
 
-    public function test_visitors_can_view_listing_details_but_must_sign_in_to_contact_the_seller(): void
+    public function test_visitors_must_sign_in_to_view_listing_and_seller_details(): void
     {
         $seller = User::factory()->create();
         $listing = $seller->listings()->create([
@@ -198,10 +317,8 @@ class MarketplaceTest extends TestCase
             'seller_initials' => 'ST',
         ]);
 
-        $this->get(route('listings.show', $listing))
-            ->assertOk()
-            ->assertSee('Log in to message the seller');
-
+        $this->get(route('listings.show', $listing))->assertRedirect(route('login'));
+        $this->get(route('sellers.show', $seller))->assertRedirect(route('login'));
         $this->get(route('listings.messages.create', $listing))->assertRedirect(route('login'));
     }
 

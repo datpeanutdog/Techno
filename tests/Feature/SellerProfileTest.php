@@ -11,7 +11,7 @@ class SellerProfileTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_public_seller_profile_shows_their_active_listings_and_reviews(): void
+    public function test_signed_in_members_can_view_seller_listings_and_reviews(): void
     {
         $seller = User::factory()->create([
             'name' => 'Jamie Seller',
@@ -37,7 +37,7 @@ class SellerProfileTest extends TestCase
             'body' => 'Friendly and easy to arrange a pickup with.',
         ]);
 
-        $this->get(route('sellers.show', $seller))
+        $this->actingAs($reviewer)->get(route('sellers.show', $seller))
             ->assertOk()
             ->assertSee('Jamie Seller')
             ->assertSee('Engineering student')
