@@ -39,7 +39,7 @@ class StoreSupportReportRequest extends FormRequest
             'category' => ['required', Rule::in(array_keys(SupportReport::CATEGORIES))],
             'details' => ['required', 'string', 'max:5000'],
             'proofs' => ['nullable', 'array', 'max:3'],
-            'proofs.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'proofs.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ];
     }
 }

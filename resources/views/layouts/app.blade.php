@@ -36,6 +36,7 @@
 
                 <p class="sidebar-section-label">Marketplace</p>
                 <nav class="main-nav" aria-label="Main navigation">
+<<<<<<< Updated upstream
                     <a class="{{ request()->routeIs('marketplace.index') && request('mode') !== 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'sale']) }}#discover" @if (request()->routeIs('marketplace.index') && request('mode') !== 'rent') aria-current="page" @endif>
                         <span class="sidebar-nav-icon" aria-hidden="true">⌕</span><span>Buy</span>
                     </a>
@@ -44,6 +45,16 @@
                     </a>
                     <a class="{{ request()->routeIs('listings.create') ? 'is-active' : '' }}" href="{{ route('listings.create') }}" @if (request()->routeIs('listings.create')) aria-current="page" @endif>
                         <span class="sidebar-nav-icon" aria-hidden="true">＋</span><span>Sell</span>
+=======
+                    <a class="{{ request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') !== 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'sale']) }}#discover" @if (request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') !== 'rent') aria-current="page" @endif>
+                        <span>Buy</span>
+                    </a>
+                    <a class="{{ request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'rent']) }}#discover" @if (request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent') aria-current="page" @endif>
+                        <span>Rent</span>
+>>>>>>> Stashed changes
+                    </a>
+                    <a class="{{ request()->routeIs('marketplace.index') && request('view') === 'saved' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['view' => 'saved']) }}#discover" data-saved-link @if (request()->routeIs('marketplace.index') && request('view') === 'saved') aria-current="page" @endif>
+                        <span>Save for later</span>
                     </a>
                 </nav>
 
@@ -120,9 +131,11 @@
                                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </button>
-                        <a class="button button-navy header-sell" href="{{ route('listings.create') }}">
-                            <span aria-hidden="true">＋</span> List an item
-                        </a>
+                        @unless (request()->routeIs('marketplace.index', 'conversations.*', 'support.reports.*', 'my-listings'))
+                            <a class="button button-navy header-sell" href="{{ route('listings.create') }}">
+                                <span aria-hidden="true">＋</span> List an item
+                            </a>
+                        @endunless
                     @elseif (request()->routeIs('marketplace.index'))
                         <nav class="landing-header-nav" aria-label="Account navigation">
                             <a class="landing-header-login" href="{{ route('marketplace.index', ['panel' => 'login']) }}">Log in</a>

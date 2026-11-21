@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -36,6 +37,9 @@ type SupportReport = {
   admin_note: string | null;
   created_at: string;
 };
+
+const MAX_PROOF_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_TOTAL_PROOF_BYTES = 12 * 1024 * 1024;
 
 export default function SupportScreen() {
   const { reportedUserId, reportedUserName } = useLocalSearchParams<{
@@ -111,21 +115,59 @@ export default function SupportScreen() {
       form.append('category', category);
       form.append('details', details.trim());
 
-      proofs.forEach((proof, index) => {
+      let totalProofBytes = 0;
+      for (const [index, proof] of proofs.entries()) {
         if (Platform.OS === 'web') {
           if (!proof.file) {
             throw new Error('A selected image could not be read. Please choose it again.');
           }
+
+          if (proof.file.size > MAX_PROOF_IMAGE_BYTES) {
+            throw new Error('Each proof image must be 4 MB or smaller.');
+          }
+
+          totalProofBytes += proof.file.size;
+          if (totalProofBytes > MAX_TOTAL_PROOF_BYTES) {
+            throw new Error('Proof images must total 12 MB or less.');
+          }
+
           form.append(`proofs[${index}]`, proof.file);
-          return;
+          continue;
+        }
+
+        const resizeScale = Math.min(1, 1600 / proof.width, 1600 / proof.height);
+        const resizedImage = await ImageManipulator.manipulate(proof.uri)
+          .resize({
+            width: Math.max(1, Math.round(proof.width * resizeScale)),
+            height: Math.max(1, Math.round(proof.height * resizeScale)),
+          })
+          .renderAsync();
+        const uploadImage = await resizedImage.saveAsync({
+          compress: 0.7,
+          format: SaveFormat.JPEG,
+          base64: true,
+        });
+
+        if (!uploadImage.base64) {
+          throw new Error('A proof image could not be prepared. Please choose it again.');
+        }
+
+        const imageSize = Math.ceil(uploadImage.base64.length * 3 / 4);
+        if (imageSize > MAX_PROOF_IMAGE_BYTES) {
+          throw new Error('A proof image is still too large after compression. Please choose a smaller photo.');
+        }
+
+        totalProofBytes += imageSize;
+        if (totalProofBytes > MAX_TOTAL_PROOF_BYTES) {
+          throw new Error('Proof images must total 12 MB or less.');
         }
 
         form.append(`proofs[${index}]`, {
-          uri: proof.uri,
-          name: proof.fileName ?? `support-proof-${index + 1}.jpg`,
-          type: proof.mimeType ?? 'image/jpeg',
+          uri: uploadImage.uri,
+          name: `support-proof-${index + 1}.jpg`,
+          type: 'image/jpeg',
         } as unknown as Blob);
-      });
+      }
 
       const result = await requestJson<SupportReport>('/support/reports', {
         method: 'POST',
@@ -206,7 +248,7 @@ export default function SupportScreen() {
               <Text style={styles.fieldLabel}>What happened?</Text>
               <TextInput maxLength={5000} multiline onChangeText={setDetails} placeholder="Include relevant dates, messages, or transaction details." style={[styles.formInput, styles.multilineInput]} value={details} />
 
-              <Text style={styles.fieldLabel}>Image proof (up to 3)</Text>
+              <Text style={styles.fieldLabel}>Image proof (up to 3, 4 MB each)</Text>
               <Pressable disabled={busy || proofs.length >= 3} onPress={() => void pickProofs()} style={[styles.primaryButton, { backgroundColor: COLORS.paleNeutral, marginTop: 8 }]}>
                 <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>{proofs.length ? `Add proof images (${proofs.length}/3)` : 'Choose proof images'}</Text>
               </Pressable>

@@ -60,6 +60,23 @@ class SupportReportTest extends TestCase
         $this->assertDatabaseCount('support_reports', 0);
     }
 
+    public function test_report_submission_rejects_a_proof_image_over_four_megabytes(): void
+    {
+        Storage::fake('local');
+        $reporter = User::factory()->create();
+        $reportedUser = User::factory()->create();
+
+        $this->actingAs($reporter)->from(route('support.reports.create'))->post(route('support.reports.store'), [
+            'reported_user_id' => $reportedUser->id,
+            'category' => 'other',
+            'details' => 'The account needs review.',
+            'proofs' => [UploadedFile::fake()->create('oversized.jpg', 4097, 'image/jpeg')],
+        ])->assertRedirect(route('support.reports.create'))
+            ->assertSessionHasErrors('proofs.0');
+
+        $this->assertDatabaseCount('support_reports', 0);
+    }
+
     public function test_users_cannot_report_their_own_account(): void
     {
         $reporter = User::factory()->create();
@@ -76,17 +93,23 @@ class SupportReportTest extends TestCase
 
     public function test_mobile_user_can_submit_and_list_their_support_reports(): void
     {
+        Storage::fake('local');
         $reporter = User::factory()->create();
         $reportedUser = User::factory()->create(['email' => 'reported@example.test']);
 
-        $this->actingAs($reporter, 'sanctum')->postJson('/api/support/reports', [
+        $this->actingAs($reporter, 'sanctum')->post('/api/support/reports', [
             'reported_user_id' => $reportedUser->id,
             'category' => 'harassment',
             'details' => 'The account sent threatening messages.',
-        ])->assertCreated()
+            'proofs' => [$this->proofImage('report.png')],
+        ], ['Accept' => 'application/json'])->assertCreated()
             ->assertJsonPath('data.category', 'harassment')
-            ->assertJsonPath('data.proof_count', 0)
+            ->assertJsonPath('data.proof_count', 1)
             ->assertJsonPath('data.reported_user.account_identifier', $reportedUser->account_identifier);
+
+        $this->assertDatabaseCount('support_reports', 1);
+        $report = SupportReport::query()->firstOrFail();
+        Storage::disk('local')->assertExists($report->proof_paths[0]);
 
         $this->getJson('/api/support/reports')
             ->assertOk()

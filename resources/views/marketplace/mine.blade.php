@@ -25,6 +25,6 @@
         @empty
             <div class="auth-card"><h2>No listings yet</h2><p>Your next school-day essential can go here.</p><a class="button button-navy" href="{{ route('listings.create') }}">Post an item</a></div>
         @endforelse
-        {{ $listings->links() }}
+        <div class="pagination-wrap">{{ $listings->links() }}</div>
     </section>
 @endsection
