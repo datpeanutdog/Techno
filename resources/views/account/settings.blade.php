@@ -1,25 +1,21 @@
 @extends('layouts.app')
 
-@section('title', 'Settings — PASABUY')
+@section('title', 'Settings — Pasabuy')
 
 @section('content')
     <section class="settings-shell">
         <header class="settings-header">
-            <p class="eyebrow">Make PASABUY yours</p>
+            <p class="eyebrow">Make Pasabuy yours</p>
             <h1>Settings</h1>
-            <p class="settings-intro">Choose how PASABUY looks on this device and find your account tools.</p>
+            <p class="settings-intro">Choose how Pasabuy looks on this device and find your account tools.</p>
         </header>
 
         <div class="settings-grid">
-            <section class="settings-card" aria-labelledby="appearance-heading">
+            <section class="settings-card" aria-labelledby="appearance-heading" data-theme-settings>
                 <p class="eyebrow">Comfortable browsing</p>
                 <h2 id="appearance-heading">Appearance</h2>
-                <fieldset class="settings-theme-options" data-theme-settings>
+                <fieldset class="settings-theme-options">
                     <legend class="sr-only">Choose a color theme</legend>
-                    <label class="settings-theme-option" for="theme-system">
-                        <span class="settings-theme-label">System</span>
-                        <input id="theme-system" type="radio" name="theme" value="system" data-theme-option checked>
-                    </label>
                     <label class="settings-theme-option" for="theme-light">
                         <span class="settings-theme-label">Light</span>
                         <input id="theme-light" type="radio" name="theme" value="light" data-theme-option>
@@ -46,7 +42,7 @@
                     <a class="settings-link" href="{{ route('support.reports.create') }}">
                         <span>
                             <strong>Help and support</strong>
-                            <small>Get help with your PASABUY account.</small>
+                            <small>Get help with your Pasabuy account.</small>
                         </span>
                         <span aria-hidden="true">→</span>
                     </a>
