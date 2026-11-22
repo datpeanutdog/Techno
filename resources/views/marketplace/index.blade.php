@@ -34,6 +34,7 @@
                 <input type="search" name="q" value="{{ request('q') }}" placeholder="Search campus listings" aria-label="Search campus listings">
             </label>
             <label class="marketplace-category-filter">
+                <span class="marketplace-category-label">Category</span>
                 <select name="category" aria-label="Filter by category">
                     <option value="">All categories</option>
                     @foreach ($categories as $category)
@@ -131,6 +132,7 @@
                                     @endif
                                 </a>
                             @endif
+                            <time class="listing-posted" datetime="{{ $listing->created_at->toIso8601String() }}">Listed {{ $listing->created_at->diffForHumans() }}</time>
                             <div class="listing-card-bottom">
                                 <p class="listing-price">₱{{ number_format((float) $listing->price, $listing->price == (int) $listing->price ? 0 : 2) }}@if ($listing->type === 'rent')<span> / {{ $listing->rent_period }}</span>@endif</p>
                                 <span class="seller-rating">

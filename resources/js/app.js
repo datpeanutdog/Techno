@@ -1,5 +1,52 @@
-const favoriteKey = 'pasabuy:favorites';
+const favoriteKey = `pasabuy:favorites:${document.body.dataset.accountId || 'guest'}`;
 const toast = document.querySelector('#toast');
+const themePreferenceKey = 'pasabuy:theme';
+let themePreference = 'system';
+
+try {
+    const savedThemePreference = window.localStorage.getItem(themePreferenceKey);
+    if (['system', 'light', 'dark'].includes(savedThemePreference)) {
+        themePreference = savedThemePreference;
+    }
+} catch (error) {
+    console.error('Unable to read the saved theme preference.', error);
+}
+
+const applyThemePreference = (preference) => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.dataset.theme = preference === 'dark' || (preference === 'system' && prefersDark)
+        ? 'dark'
+        : 'light';
+};
+
+applyThemePreference(themePreference);
+
+const themeOptions = document.querySelectorAll('[data-theme-option]');
+const themeStatus = document.querySelector('[data-theme-status]');
+
+themeOptions.forEach((option) => {
+    option.checked = option.value === themePreference;
+    option.addEventListener('change', () => {
+        if (!option.checked) return;
+
+        themePreference = option.value;
+        applyThemePreference(themePreference);
+
+        try {
+            window.localStorage.setItem(themePreferenceKey, themePreference);
+            themeStatus.textContent = 'Your theme preference is saved on this browser.';
+        } catch (error) {
+            console.error('Unable to save the theme preference.', error);
+            themeStatus.textContent = 'Your theme is active, but this browser could not save the preference.';
+        }
+    });
+});
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (themePreference === 'system') {
+        applyThemePreference(themePreference);
+    }
+});
 
 const supportReportForm = document.querySelector('[data-support-report-form]');
 if (supportReportForm) {

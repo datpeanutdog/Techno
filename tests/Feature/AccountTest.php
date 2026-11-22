@@ -59,6 +59,25 @@ class AccountTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_settings_page_requires_authentication(): void
+    {
+        $this->get('/settings')->assertRedirect(route('login'));
+    }
+
+    public function test_signed_in_user_can_choose_a_theme_in_settings(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get('/settings')
+            ->assertOk()
+            ->assertSee('Appearance')
+            ->assertSee('System')
+            ->assertSee('Light')
+            ->assertSee('Dark')
+            ->assertSee('data-theme-settings', false)
+            ->assertSee(route('profile.edit'))
+            ->assertSee(route('support.reports.create'));
+    }
+
     public function test_web_user_can_upload_a_profile_photo_up_to_ten_megabytes(): void
     {
         Storage::fake('public');

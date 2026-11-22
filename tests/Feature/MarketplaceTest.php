@@ -65,6 +65,7 @@ class MarketplaceTest extends TestCase
                 '>Manage Listing</span>',
                 '>Message</span>',
                 '>Support</span>',
+                '>Settings</span>',
             ], false)
             ->assertDontSee('<p class="sidebar-section-label">Marketplace</p>', false)
             ->assertDontSee('data-saved-link', false);
@@ -79,6 +80,7 @@ class MarketplaceTest extends TestCase
             route('support.reports.mine'),
             route('my-listings'),
             route('profile.edit'),
+            route('settings'),
         ] as $page) {
             $this->actingAs($user)->get($page)
                 ->assertOk()
@@ -86,6 +88,20 @@ class MarketplaceTest extends TestCase
                 ->assertDontSee('Good finds, shared by students like you.')
                 ->assertDontSee('Buy · sell · rent · pass it on');
         }
+    }
+
+    public function test_marketplace_uses_a_separate_saved_listing_scope_for_each_account(): void
+    {
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+
+        $this->actingAs($firstUser)->get('/')
+            ->assertOk()
+            ->assertSee('<body data-account-id="'.$firstUser->id.'">', false);
+
+        $this->actingAs($secondUser)->get('/')
+            ->assertOk()
+            ->assertSee('<body data-account-id="'.$secondUser->id.'">', false);
     }
 
     public function test_search_filters_listings_by_keyword_and_location(): void
@@ -192,6 +208,28 @@ class MarketplaceTest extends TestCase
             ->assertSee('Mika Santos')
             ->assertSee('class="listing-condition condition-good">Good</span>', false)
             ->assertSee('About this campus find');
+    }
+
+    public function test_marketplace_cards_show_when_a_listing_was_created(): void
+    {
+        $this->travelTo(now()->setTime(12, 0));
+        $seller = User::factory()->create();
+        $listing = $seller->listings()->create([
+            'title' => 'Recent campus post',
+            'description' => 'A useful campus listing.',
+            'price' => 100,
+            'type' => 'sale',
+            'category' => 'Books & Notes',
+            'location' => 'Main campus',
+            'seller_name' => $seller->name,
+            'seller_initials' => 'RC',
+        ]);
+        $this->travel(2)->hours();
+
+        $this->actingAs(User::factory()->create())
+            ->get('/')
+            ->assertOk()
+            ->assertSee('<time class="listing-posted" datetime="'.$listing->created_at->toIso8601String().'">Listed 2 hours ago</time>', false);
     }
 
     public function test_non_school_categories_are_not_shown_in_the_marketplace(): void

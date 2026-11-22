@@ -46,6 +46,7 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
     Route::post('/sellers/{user}/reviews', [SellerController::class, 'review'])
         ->middleware('throttle:5,1')
         ->name('sellers.reviews.store');
+    Route::get('/settings', [AccountController::class, 'settings'])->name('settings');
     Route::get('/profile', [AccountController::class, 'editProfile'])->name('profile.edit');
     Route::put('/profile', [AccountController::class, 'updateProfile'])->name('profile.update');
     Route::get('/my-listings', [MarketplaceController::class, 'myListings'])->name('my-listings');

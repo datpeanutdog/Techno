@@ -7,11 +7,25 @@
     <meta name="description" content="Buy, sell, and rent school essentials with PASABUY, the student-to-student campus marketplace.">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <title>@yield('title', 'PASABUY — your neighborhood marketplace')</title>
+    <script>
+        let themePreference = 'system';
+        try {
+            const savedThemePreference = window.localStorage.getItem('pasabuy:theme');
+            if (['system', 'light', 'dark'].includes(savedThemePreference)) {
+                themePreference = savedThemePreference;
+            }
+        } catch (error) {
+            console.error('Unable to read the saved theme preference.', error);
+        }
+        if (themePreference === 'dark' || (themePreference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.dataset.theme = 'dark';
+        }
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 @php($hasSidebar = auth()->check() && ! request()->routeIs('login', 'register', 'password.*', 'account.suspension.*'))
 @php($isLandingPage = ! auth()->check() && request()->routeIs('marketplace.index'))
-<body>
+<body data-account-id="{{ auth()->id() ?? 'guest' }}">
     <div class="site-layout {{ $hasSidebar ? 'has-sidebar' : '' }} {{ $isLandingPage ? 'landing-layout' : '' }}">
         @if ($hasSidebar)
             <aside class="site-sidebar" id="site-sidebar" aria-label="Site navigation">
@@ -71,6 +85,9 @@
                         <a class="support-nav-link" href="{{ route('support.reports.mine') }}" @if (request()->routeIs('support.reports.*')) aria-current="page" @endif>
                             <span>Support</span>
                         </a>
+                        <a href="{{ route('settings') }}" @if (request()->routeIs('settings')) aria-current="page" @endif>
+                            <span>Settings</span>
+                        </a>
                         @if (auth()->user()->isAdmin())
                             <a href="{{ route('admin.support-reports.index') }}" @if (request()->routeIs('admin.support-reports.*')) aria-current="page" @endif>
                                 <span>Admin</span>
@@ -122,7 +139,7 @@
                                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </button>
-                        @unless (request()->routeIs('marketplace.index', 'conversations.*', 'my-listings', 'profile.*', 'support.reports.*'))
+                        @unless (request()->routeIs('marketplace.index', 'conversations.*', 'my-listings', 'profile.*', 'settings', 'support.reports.*'))
                             <a class="button button-navy header-sell" href="{{ route('listings.create') }}">
                                 <span aria-hidden="true">＋</span> List an item
                             </a>
@@ -130,7 +147,7 @@
                     @elseif (request()->routeIs('marketplace.index'))
                         <nav class="landing-header-nav" aria-label="Account navigation">
                             <a class="landing-header-login" href="{{ route('marketplace.index', ['panel' => 'login']) }}">Log in</a>
-                            <a class="button button-navy landing-header-join" href="{{ route('marketplace.index') }}#account-form">Join PASABUY <span aria-hidden="true">→</span></a>
+                            <a class="button button-navy landing-header-join" href="{{ route('marketplace.index') }}">Join PASABUY <span aria-hidden="true">→</span></a>
                         </nav>
                     @endif
                 </div>

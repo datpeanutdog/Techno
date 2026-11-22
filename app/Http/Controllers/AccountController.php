@@ -114,6 +114,11 @@ class AccountController extends Controller
         return view('account.profile');
     }
 
+    public function settings(): View
+    {
+        return view('account.settings');
+    }
+
     public function updateProfile(Request $request): RedirectResponse
     {
         $data = $request->validate([
