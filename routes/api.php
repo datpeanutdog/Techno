@@ -20,6 +20,9 @@ Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
         ->middleware('throttle:20,1');
     Route::get('/listings', [ListingController::class, 'index']);
     Route::get('/listings/{slug}', [ListingController::class, 'show']);
+    Route::get('/saved-listings', [ListingController::class, 'saved']);
+    Route::post('/saved-listings/{listing}', [ListingController::class, 'save']);
+    Route::delete('/saved-listings/{listing}', [ListingController::class, 'unsave']);
     Route::get('/sellers/{user}', [SellerController::class, 'show']);
     Route::post('/sellers/{user}/reviews', [SellerController::class, 'review'])->middleware('throttle:5,1');
     Route::get('/auth/me', [AccountController::class, 'me']);

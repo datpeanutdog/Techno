@@ -684,6 +684,174 @@ textarea.form-control { min-height: 96px; resize: vertical; line-height: 1.6; }
 .message-error { margin: 0 0 8px; color: #a13d31; font-size: 12px; }
 .detail-card .message-seller-button { font-size: 13px; }
 
+.listing-added { display: block; margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.3; }
+.marketplace-category-label { margin-right: 8px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.settings-shell { width: min(940px, calc(100% - 64px)); margin: 34px auto 76px; }
+.settings-header { margin-bottom: 22px; }
+.settings-header h1 { margin: 8px 0; color: var(--navy); font-size: 32px; letter-spacing: -.045em; }
+.settings-intro { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.settings-card { padding: 24px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.settings-card h2 { margin: 7px 0 0; color: var(--navy); font-size: 22px; letter-spacing: -.035em; }
+.settings-theme-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0 0; padding: 0; border: 0; }
+.settings-theme-option { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); cursor: pointer; }
+.settings-theme-option:has(input:checked) { border-color: var(--gold-dark); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold-dark) 18%, transparent); }
+.settings-theme-option input { margin: 0; accent-color: var(--gold-dark); }
+.settings-theme-label { font-size: 12px; font-weight: 650; }
+.settings-status { min-height: 18px; margin: 12px 0 0; color: var(--muted); font-size: 12px; }
+.settings-links { display: grid; gap: 8px; margin-top: 15px; }
+.settings-link { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); }
+.settings-link:hover { border-color: var(--gold-dark); background: color-mix(in srgb, var(--gold) 9%, var(--paper)); }
+.settings-link strong, .settings-link small { display: block; }
+.settings-link strong { font-size: 13px; }
+.settings-link small { margin-top: 4px; color: var(--muted); font-size: 11px; }
+
+@media (max-width: 700px) {
+    .settings-shell { width: calc(100% - 32px); margin-top: 24px; }
+    .settings-grid { grid-template-columns: 1fr; }
+    .settings-card { padding: 20px; }
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --ink: #f1e9dd;
+    --navy: #ead9b9;
+    --navy-deep: #211b16;
+    --gold: #e3b65f;
+    --gold-dark: #e6c27b;
+    --cream: #181613;
+    --paper: #24201c;
+    --green: #91b99a;
+    --muted: #c3b9ab;
+    --line: #453b31;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] .site-content,
+html[data-theme="dark"] .site-sidebar,
+html[data-theme="dark"] .site-header,
+html[data-theme="dark"] .listing-card,
+html[data-theme="dark"] .listing-form,
+html[data-theme="dark"] .auth-card,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .settings-link,
+html[data-theme="dark"] .seller-profile-card,
+html[data-theme="dark"] .seller-empty-state,
+html[data-theme="dark"] .seller-review-signin,
+html[data-theme="dark"] .seller-review-form,
+html[data-theme="dark"] .seller-review,
+html[data-theme="dark"] .my-listing,
+html[data-theme="dark"] .support-card,
+html[data-theme="dark"] .support-report-card,
+html[data-theme="dark"] .admin-report-card,
+html[data-theme="dark"] .conversation-list,
+html[data-theme="dark"] .conversation-header,
+html[data-theme="dark"] .message-compose,
+html[data-theme="dark"] .message-start-form {
+    border-color: var(--line);
+    background-color: var(--paper);
+    color: var(--ink);
+}
+
+html[data-theme="dark"] .sidebar-section-label,
+html[data-theme="dark"] .site-sidebar .main-nav a,
+html[data-theme="dark"] .site-sidebar .account-nav a,
+html[data-theme="dark"] .site-sidebar .sidebar-logout-button,
+html[data-theme="dark"] .main-nav a,
+html[data-theme="dark"] .sort-form,
+html[data-theme="dark"] .listing-category,
+html[data-theme="dark"] .listing-meta,
+html[data-theme="dark"] .listing-added,
+html[data-theme="dark"] .listing-price span,
+html[data-theme="dark"] .seller-rating,
+html[data-theme="dark"] .active-filters,
+html[data-theme="dark"] .empty-state p,
+html[data-theme="dark"] .back-link,
+html[data-theme="dark"] .detail-meta,
+html[data-theme="dark"] .detail-description,
+html[data-theme="dark"] .detail-card h2,
+html[data-theme="dark"] .form-label,
+html[data-theme="dark"] .form-help,
+html[data-theme="dark"] .seller-profile-stats,
+html[data-theme="dark"] .my-listing p,
+html[data-theme="dark"] .settings-intro,
+html[data-theme="dark"] .settings-link small,
+html[data-theme="dark"] .settings-status {
+    color: var(--muted);
+}
+
+html[data-theme="dark"] .sidebar-close,
+html[data-theme="dark"] .sidebar-collapse,
+html[data-theme="dark"] .sidebar-toggle,
+html[data-theme="dark"] .sidebar-logout-button,
+html[data-theme="dark"] .sort-form select,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .marketplace-search,
+html[data-theme="dark"] .marketplace-category-filter,
+html[data-theme="dark"] .settings-theme-option {
+    border-color: var(--line);
+    background-color: #1b1916;
+    color: var(--ink);
+}
+
+html[data-theme="dark"] .site-sidebar .main-nav a:hover,
+html[data-theme="dark"] .site-sidebar .account-nav a:hover,
+html[data-theme="dark"] .site-sidebar .main-nav a.is-active,
+html[data-theme="dark"] .site-sidebar .account-nav a[aria-current="page"],
+html[data-theme="dark"] .main-nav a:hover,
+html[data-theme="dark"] .main-nav a.is-active,
+html[data-theme="dark"] .settings-link:hover,
+html[data-theme="dark"] .pagination-wrap > nav a:hover {
+    border-color: #8a7047;
+    background-color: #383024;
+    color: #fff4df;
+}
+
+html[data-theme="dark"] .listing-title,
+html[data-theme="dark"] .settings-card h2,
+html[data-theme="dark"] .settings-link,
+html[data-theme="dark"] .seller-info strong,
+html[data-theme="dark"] .my-listing h2,
+html[data-theme="dark"] .messages-heading h1,
+html[data-theme="dark"] .conversation-header h1 {
+    color: var(--ink);
+}
+
+html[data-theme="dark"] .listing-card-bottom,
+html[data-theme="dark"] .form-heading,
+html[data-theme="dark"] .conversation-row,
+html[data-theme="dark"] .message-thread {
+    border-color: var(--line);
+}
+
+html[data-theme="dark"] .button-navy,
+html[data-theme="dark"] .button-dark,
+html[data-theme="dark"] .form-step {
+    background: #665039;
+    color: #fff8eb;
+}
+
+html[data-theme="dark"] .button-navy:hover,
+html[data-theme="dark"] .button-dark:hover {
+    background: #7b5b37;
+}
+
+html[data-theme="dark"] .message-thread { background: #1b1916; }
+html[data-theme="dark"] .conversation-row:hover { background: #302b24; }
+html[data-theme="dark"] .message-bubble { border-color: var(--line); background: #302b24; }
+html[data-theme="dark"] .message-bubble.message-own { border-color: #67553a; background: #463925; }
+html[data-theme="dark"] .detail-safety,
+html[data-theme="dark"] .message-listing-context,
+html[data-theme="dark"] .support-target-summary,
+html[data-theme="dark"] .support-admin-note,
+html[data-theme="dark"] .suspension-appeal-status,
+html[data-theme="dark"] .appeal-history-card {
+    border-color: var(--line);
+    background: #302b24;
+    color: var(--muted);
+}
+html[data-theme="dark"] .flash-message { border-color: #425747; background: #26342a; color: #bdd9c2; }
+
 @media (max-width: 600px) {
     .messages-shell, .conversation-shell { width: calc(100% - 30px); margin: 32px auto 55px; }
     .messages-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
@@ -701,3 +869,61 @@ textarea.form-control { min-height: 96px; resize: vertical; line-height: 1.6; }
     .message-compose-row { flex-direction: column; }
     .message-compose-row .button { align-self: stretch; }
 }
+
+html[data-theme="dark"] .landing-signup-card,
+html[data-theme="dark"] .support-empty {
+    border-color: var(--line);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+html[data-theme="dark"] .landing-signup-card h2 { color: var(--ink); }
+
+html[data-theme="dark"] .landing-support-link {
+    border-color: #67553a;
+    background: #30291f;
+    color: var(--ink);
+}
+
+html[data-theme="dark"] .landing-support-link:hover {
+    border-color: #d6ad61;
+    background: #463b2d;
+}
+
+html[data-theme="dark"] .market-tabs .market-mode-tab {
+    border-color: var(--line);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+html[data-theme="dark"] .market-tabs .market-mode-tab:hover {
+    border-color: #8a7047;
+    background: #302b24;
+    color: #fff4df;
+}
+
+html[data-theme="dark"] .market-tabs .market-mode-tab.tab-active {
+    border-color: #a88448;
+    background: linear-gradient(135deg, #393024, #2d261d);
+    color: #f1e9dd;
+    box-shadow: 0 6px 16px #00000030, inset 0 0 0 1px #e3b65f20;
+}
+
+html[data-theme="dark"] .market-tabs .market-mode-copy small { color: #c3b9ab; }
+html[data-theme="dark"] .market-tabs .market-mode-tab.tab-active .market-mode-copy small { color: #e0cda9; }
+html[data-theme="dark"] .landing-support-link strong,
+html[data-theme="dark"] .landing-support-link small,
+html[data-theme="dark"] .landing-support-arrow { color: #f0e5d1; }
+html[data-theme="dark"] .landing-support-icon,
+html[data-theme="dark"] .market-mode-icon,
+html[data-theme="dark"] .saved-view-mark,
+html[data-theme="dark"] .profile-avatar-preview,
+html[data-theme="dark"] .sidebar-profile-initial,
+html[data-theme="dark"] .conversation-avatar { background-color: #51412b; color: #f0d7a4; }
+html[data-theme="dark"] .landing-hero-copy > .eyebrow { color: #f0d7a4; }
+html[data-theme="dark"] .support-report-topline strong,
+html[data-theme="dark"] .support-target-summary strong,
+html[data-theme="dark"] .seller-profile-stats strong { color: var(--ink); }
+html[data-theme="dark"] .support-review-form { border-color: var(--line); }
+html[data-theme="dark"] .unread-badge { background: #7b5b37; color: #fff8eb; }
+html[data-theme="dark"] .hero-sticker { background: #665039; color: #fff8eb; }

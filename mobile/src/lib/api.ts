@@ -33,6 +33,7 @@ export type Listing = {
   seller_initials: string;
   seller_rating: string | number;
   condition: string | null;
+  created_at: string;
   user?: Pick<UserProfile, 'id' | 'name' | 'bio' | 'campus' | 'avatar_url'> & {
     received_reviews_count?: number;
     received_reviews_avg_rating?: number | string | null;
@@ -173,4 +174,3 @@ export function formatPrice(price: string | number) {
 }
 
 // FIXED: Cleaned up colons here as well in case this key gets passed to SecureStore later
-export const FAVORITES_KEY = 'pasabuy_mobile_favorites';

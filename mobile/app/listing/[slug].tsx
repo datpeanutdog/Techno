@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -11,10 +10,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { COLORS, CATEGORY_ICONS, getConditionTone, styles } from '../../App';
+import { COLORS, CATEGORY_ICONS, formatListedTime, getConditionTone, styles } from '../../App';
 import {
   clearAuthToken,
-  FAVORITES_KEY,
   getAuthToken,
   Listing,
   formatPrice,
@@ -42,15 +40,15 @@ export default function ListingDetailScreen() {
           return;
         }
 
-        const [result, favorites, profile] = await Promise.all([
+        const [result, savedResult, profile] = await Promise.all([
           requestJson<Listing>(`/listings/${encodeURIComponent(slug)}`),
-          AsyncStorage.getItem(FAVORITES_KEY),
+          requestJson<number[]>('/saved-listings'),
           requestJson<UserProfile>('/auth/me'),
         ]);
         if (!active) return;
         setListing(result.data);
         setCurrentUserId(profile.data.id);
-        if (favorites) setSavedIds(JSON.parse(favorites) as number[]);
+        setSavedIds(savedResult.data);
       } catch (issue) {
         const detail = issue instanceof Error ? issue.message : 'Could not load this listing.';
         if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
@@ -72,16 +70,19 @@ export default function ListingDetailScreen() {
   const toggleFavorite = async () => {
     if (!listing) return;
 
-    const next = savedIds.includes(listing.id)
+    const wasSaved = savedIds.includes(listing.id);
+    const next = wasSaved
       ? savedIds.filter((id) => id !== listing.id)
       : [...savedIds, listing.id];
 
-    setSavedIds(next);
-
     try {
-      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
-    } catch {
-      setError('Could not save your favorite on this device.');
+      await requestJson<{ saved: boolean; listing_id: number }>(
+        `/saved-listings/${listing.id}`,
+        { method: wasSaved ? 'DELETE' : 'POST' },
+      );
+      setSavedIds(next);
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : 'Could not update your saved find.');
     }
   };
 
@@ -134,6 +135,7 @@ export default function ListingDetailScreen() {
               ) : null}
             </Text>
             <Text style={styles.detailLocation}>⌖  {listing.location}</Text>
+            <Text style={styles.detailListedTime}>{formatListedTime(listing.created_at)}</Text>
             <View style={styles.divider} />
             <Text style={styles.detailHeading}>A little more about it</Text>
             <Text style={styles.detailDescription}>{listing.description}</Text>

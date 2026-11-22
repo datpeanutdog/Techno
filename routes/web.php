@@ -57,6 +57,11 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
         ->name('sellers.reviews.store');
     Route::get('/profile', [AccountController::class, 'editProfile'])->name('profile.edit');
     Route::put('/profile', [AccountController::class, 'updateProfile'])->name('profile.update');
+    Route::get('/settings', [AccountController::class, 'editSettings'])->name('settings.index');
+    Route::post('/saved-listings/{listing}', [MarketplaceController::class, 'saveListing'])
+        ->name('saved-listings.store');
+    Route::delete('/saved-listings/{listing}', [MarketplaceController::class, 'unsaveListing'])
+        ->name('saved-listings.destroy');
     Route::get('/my-listings', [MarketplaceController::class, 'myListings'])->name('my-listings');
     Route::get('/my-listings/{listing}/edit', [MarketplaceController::class, 'edit'])->name('my-listings.edit');
     Route::put('/my-listings/{listing}', [MarketplaceController::class, 'update'])->name('my-listings.update');

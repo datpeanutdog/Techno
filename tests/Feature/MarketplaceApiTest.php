@@ -79,6 +79,41 @@ class MarketplaceApiTest extends TestCase
         ]);
     }
 
+    public function test_api_saved_listings_belong_to_the_authenticated_user(): void
+    {
+        $listing = Listing::create([
+            'title' => 'Saved mobile listing',
+            'slug' => 'saved-mobile-listing',
+            'description' => 'A school supply listing to save.',
+            'price' => 80,
+            'type' => 'sale',
+            'category' => 'School Supplies',
+            'location' => 'Campus',
+            'seller_name' => 'Seller',
+            'seller_initials' => 'SE',
+        ]);
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/saved-listings/'.$listing->id)
+            ->assertOk()
+            ->assertJsonPath('saved', true)
+            ->assertJsonPath('listing_id', $listing->id);
+        $this->actingAs($user, 'sanctum')->getJson('/api/saved-listings')
+            ->assertOk()
+            ->assertExactJson(['data' => [$listing->id]]);
+        $this->actingAs($otherUser, 'sanctum')->getJson('/api/saved-listings')
+            ->assertOk()
+            ->assertExactJson(['data' => []]);
+
+        $this->actingAs($user, 'sanctum')
+            ->deleteJson('/api/saved-listings/'.$listing->id)
+            ->assertOk()
+            ->assertJsonPath('saved', false);
+        $this->assertDatabaseCount('saved_listings', 0);
+    }
+
     public function test_api_seller_profiles_and_reviews_are_private_and_can_be_updated(): void
     {
         $seller = User::factory()->create(['email' => 'seller@example.test']);

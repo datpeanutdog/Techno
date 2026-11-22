@@ -1,5 +1,55 @@
-const favoriteKey = 'pasabuy:favorites';
+const themePreferenceKey = 'pasabuy:theme';
 const toast = document.querySelector('#toast');
+
+const themeSettings = document.querySelector('[data-theme-settings]');
+const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)');
+let themePreference = 'system';
+
+try {
+    const storedTheme = window.localStorage.getItem(themePreferenceKey);
+    if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') {
+        themePreference = storedTheme;
+    }
+} catch (error) {
+    console.error('Unable to read the saved theme preference.', error);
+}
+
+const applyTheme = () => {
+    document.documentElement.dataset.theme = themePreference === 'dark'
+        || (themePreference === 'system' && prefersDarkTheme.matches)
+        ? 'dark'
+        : 'light';
+};
+
+applyTheme();
+prefersDarkTheme.addEventListener('change', applyTheme);
+
+if (themeSettings) {
+    const themeStatus = themeSettings.querySelector('[data-theme-status]');
+    const selectedTheme = themeSettings.querySelector(`input[name="theme"][value="${themePreference}"]`);
+
+    if (selectedTheme instanceof HTMLInputElement) {
+        selectedTheme.checked = true;
+    }
+
+    themeSettings.addEventListener('change', (event) => {
+        const themeInput = event.target;
+
+        if (!(themeInput instanceof HTMLInputElement) || themeInput.name !== 'theme') return;
+        if (!['system', 'light', 'dark'].includes(themeInput.value)) return;
+
+        themePreference = themeInput.value;
+        applyTheme();
+
+        try {
+            window.localStorage.setItem(themePreferenceKey, themePreference);
+            themeStatus.textContent = '';
+        } catch (error) {
+            console.error('Unable to save the theme preference.', error);
+            themeStatus.textContent = 'Your theme changed, but this browser could not save your preference.';
+        }
+    });
+}
 
 const supportReportForm = document.querySelector('[data-support-report-form]');
 if (supportReportForm) {
@@ -175,19 +225,11 @@ if (liveThread) {
 }
 
 const savedFavorites = () => {
-    try {
-        const stored = JSON.parse(window.localStorage.getItem(favoriteKey) || '[]');
-
-        if (!Array.isArray(stored)) {
-            throw new TypeError('Saved listings must be stored as an array.');
-        }
-
-        return new Set(stored.map(String).filter((id) => /^[1-9]\d*$/.test(id)));
-    } catch (error) {
-        console.error('Unable to read saved listings from local storage.', error);
-
-        return new Set();
-    }
+    return new Set(
+        Array.from(document.querySelectorAll('[data-favorite][aria-pressed="true"]'))
+            .map((button) => button.dataset.favorite)
+            .filter((id) => /^[1-9]\d*$/.test(id ?? '')),
+    );
 };
 
 const updateFavoriteButtons = () => {
@@ -214,59 +256,58 @@ const showToast = (message) => {
 
 updateFavoriteButtons();
 
-const savedLink = document.querySelector('[data-saved-link]');
-savedLink?.addEventListener('click', (event) => {
-    event.preventDefault();
-
-    const url = new URL(savedLink.href);
-    url.searchParams.set('favorites', [...savedFavorites()].sort((first, second) => Number(first) - Number(second)).join(','));
-    window.location.assign(url);
-});
-
-const savedView = document.querySelector('[data-saved-view]');
-if (savedView) {
-    const url = new URL(window.location.href);
-    const favorites = [...savedFavorites()].sort((first, second) => Number(first) - Number(second)).join(',');
-    const requestedFavorites = url.searchParams.get('favorites') || '';
-
-    if (requestedFavorites !== favorites) {
-        url.searchParams.set('favorites', favorites);
-        window.location.replace(url);
-    }
-}
-
 document.querySelectorAll('[data-favorite]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
         const favorites = savedFavorites();
         const wasSaved = favorites.has(button.dataset.favorite);
+        const url = wasSaved ? button.dataset.unsaveUrl : button.dataset.saveUrl;
+        const method = wasSaved ? 'DELETE' : 'POST';
 
-        if (wasSaved) {
-            favorites.delete(button.dataset.favorite);
-        } else {
-            favorites.add(button.dataset.favorite);
+        button.disabled = true;
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Saving the listing failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+
+            if (typeof payload.saved !== 'boolean') {
+                throw new Error('The saved listing response did not contain a saved state.');
+            }
+
+            button.setAttribute('aria-pressed', String(payload.saved));
+            button.setAttribute('aria-label', `${payload.saved ? 'Remove' : 'Save'} ${button.getAttribute('aria-label').replace(/^(Save|Remove) /, '')}`);
+        } catch (error) {
+            console.error(error);
+            showToast('Your saved listing could not be updated. Please try again.');
+            button.disabled = false;
+            return;
         }
 
-        window.localStorage.setItem(favoriteKey, JSON.stringify([...favorites]));
+        button.disabled = false;
         updateFavoriteButtons();
 
-        if (wasSaved && savedView) {
+        if (wasSaved && document.querySelector('[data-saved-view]')) {
             button.closest('.listing-card')?.remove();
-
             const url = new URL(window.location.href);
-            url.searchParams.set('favorites', [...favorites].sort((first, second) => Number(first) - Number(second)).join(','));
-            window.history.replaceState(null, '', url);
-
-            document.querySelectorAll('.pagination-wrap a').forEach((link) => {
-                const pageUrl = new URL(link.href);
-                pageUrl.searchParams.set('favorites', [...favorites].sort((first, second) => Number(first) - Number(second)).join(','));
-                link.href = pageUrl;
-            });
 
             if (!document.querySelector('.listing-grid .listing-card')) {
                 url.searchParams.delete('page');
-                window.location.assign(url);
-                return;
             }
+
+            window.location.assign(url);
+            return;
         }
 
         showToast(wasSaved ? 'Removed from your saved finds.' : 'Saved for later. Good choice!');

@@ -60,6 +60,7 @@
                                 <span class="listing-category">{{ $listing->category }}</span>
                                 <a class="listing-title" href="{{ route('listings.show', $listing) }}">{{ $listing->title }}</a>
                                 <div class="listing-meta"><span aria-hidden="true">⌖</span> {{ $listing->location }}</div>
+                                <time class="listing-added" datetime="{{ $listing->created_at->toIso8601String() }}" title="{{ $listing->created_at->format('M j, Y \a\t g:i A') }}">Listed {{ $listing->created_at->diffForHumans() }}</time>
                                 <div class="listing-card-bottom">
                                     <p class="listing-price">₱{{ number_format((float) $listing->price, $listing->price == (int) $listing->price ? 0 : 2) }}@if ($listing->type === 'rent')<span> / {{ $listing->rent_period }}</span>@endif</p>
                                     <span class="listing-badge {{ $listing->type === 'rent' ? 'badge-rent' : '' }}">{{ $listing->type === 'rent' ? 'For rent' : 'For sale' }}</span>

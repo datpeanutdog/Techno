@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +7,17 @@
     <meta name="description" content="Buy, sell, and rent school essentials with PASABUY, the student-to-student campus marketplace.">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <title>@yield('title', 'PASABUY — your neighborhood marketplace')</title>
+    <script>
+        try {
+            const preference = window.localStorage.getItem('pasabuy:theme') || 'system';
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.dataset.theme = preference === 'dark' || (preference === 'system' && prefersDark)
+                ? 'dark'
+                : 'light';
+        } catch (error) {
+            console.error('Unable to read the saved theme preference.', error);
+        }
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 @php($hasSidebar = auth()->check() && ! request()->routeIs('login', 'register', 'password.*', 'account.suspension.*'))
@@ -52,11 +63,9 @@
                     <a class="{{ request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'rent']) }}#discover" @if (request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent') aria-current="page" @endif>
                         <span>Rent</span>
                     </a>
-                    @if (request()->routeIs('marketplace.index'))
-                        <a class="{{ request('view') === 'saved' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['view' => 'saved']) }}#discover" data-saved-link @if (request('view') === 'saved') aria-current="page" @endif>
-                            <span>Save for later</span>
-                        </a>
-                    @endif
+                    <a class="{{ request()->routeIs('marketplace.index') && request('view') === 'saved' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['view' => 'saved']) }}#discover" data-saved-link @if (request()->routeIs('marketplace.index') && request('view') === 'saved') aria-current="page" @endif>
+                        <span>Save for later</span>
+                    </a>
                 </nav>
 
                 @auth
@@ -65,10 +74,13 @@
                         <a href="{{ route('my-listings') }}" @if (request()->routeIs('my-listings')) aria-current="page" @endif>
                             <span>Manage Listing</span>
                         </a>
-                        <a href="{{ route('conversations.index') }}" @if (request()->routeIs('conversations.*')) aria-current="page" @endif>
-                            <span>Message</span>
+                        <a href="{{ route('settings.index') }}" @if (request()->routeIs('settings.index')) aria-current="page" @endif>
+                            <span>Settings</span>
                         </a>
-                        <a class="support-nav-link" href="{{ route('support.reports.mine') }}" @if (request()->routeIs('support.reports.*')) aria-current="page" @endif>
+                        <a href="{{ route('conversations.index') }}" @if (request()->routeIs('conversations.*')) aria-current="page" @endif>
+                            <span>Messages</span>
+                        </a>
+                        <a class="support-nav-link" href="{{ route('support.reports.index') }}" @if (request()->routeIs('support.reports.index')) aria-current="page" @endif>
                             <span>Support</span>
                         </a>
                         @if (auth()->user()->isAdmin())
@@ -125,7 +137,7 @@
                                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </button>
-                        @unless (request()->routeIs('marketplace.index', 'conversations.*', 'my-listings', 'profile.*', 'support.reports.*'))
+                        @unless (request()->routeIs('marketplace.index', 'conversations.*', 'my-listings', 'profile.*', 'settings.*', 'support.reports.*'))
                             <a class="button button-navy header-sell" href="{{ route('listings.create') }}">
                                 <span aria-hidden="true">＋</span> List an item
                             </a>

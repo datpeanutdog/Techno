@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -16,7 +15,6 @@ import {
   View,
 } from 'react-native';
 import {
-  FAVORITES_KEY,
   Listing,
   ListingType,
   clearAuthToken,
@@ -69,6 +67,18 @@ export function formatMobilePrice(price: string | number) {
   return `₱${Number(price).toLocaleString('en-PH', {
     maximumFractionDigits: 2,
   })}`;
+}
+
+export function formatListedTime(createdAt: string) {
+  const created = new Date(createdAt);
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - created.getTime()) / 1000));
+
+  if (elapsedSeconds < 60) return 'Listed just now';
+  if (elapsedSeconds < 3600) return `Listed ${Math.floor(elapsedSeconds / 60)}m ago`;
+  if (elapsedSeconds < 86400) return `Listed ${Math.floor(elapsedSeconds / 3600)}h ago`;
+  if (elapsedSeconds < 604800) return `Listed ${Math.floor(elapsedSeconds / 86400)}d ago`;
+
+  return `Listed ${created.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 }
 
 export function Label({ children, required = false }: { children: string; required?: boolean }) {
@@ -148,6 +158,7 @@ function ListingCard({
         </View>
         <Text numberOfLines={2} style={styles.cardTitle}>{listing.title}</Text>
         <Text numberOfLines={1} style={styles.cardLocation}>⌖  {listing.location}</Text>
+        <Text style={styles.cardListedTime}>{formatListedTime(listing.created_at)}</Text>
         <View style={styles.cardBottom}>
           <Text numberOfLines={1} style={styles.cardPrice}>
             {formatMobilePrice(listing.price)}
@@ -271,13 +282,14 @@ export default function App() {
     useCallback(() => {
       let active = true;
 
-      AsyncStorage.getItem(FAVORITES_KEY)
-        .then((value) => {
-          if (active && value) setSavedIds(JSON.parse(value) as number[]);
-        })
-        .catch(() => {
-          if (active) setNotice('Saved items could not be loaded on this device.');
-        });
+      void (async () => {
+        try {
+          const result = await requestJson<number[]>('/saved-listings');
+          if (active) setSavedIds(result.data);
+        } catch (issue) {
+          if (active) setNotice(issue instanceof Error ? issue.message : 'Saved items could not be loaded.');
+        }
+      })();
 
       return () => {
         active = false;
@@ -299,16 +311,19 @@ export default function App() {
   };
 
   const toggleFavorite = async (listingId: number) => {
-    const next = savedIds.includes(listingId)
+    const wasSaved = savedIds.includes(listingId);
+    const next = wasSaved
       ? savedIds.filter((id) => id !== listingId)
       : [...savedIds, listingId];
 
-    setSavedIds(next);
-
     try {
-      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
-    } catch {
-      setNotice('Could not save your favorite on this device.');
+      await requestJson<{ saved: boolean; listing_id: number }>(
+        `/saved-listings/${listingId}`,
+        { method: wasSaved ? 'DELETE' : 'POST' },
+      );
+      setSavedIds(next);
+    } catch (issue) {
+      setNotice(issue instanceof Error ? issue.message : 'Could not update your saved find.');
     }
   };
 
@@ -683,6 +698,7 @@ export const styles = StyleSheet.create({
   cardCondition: { fontSize: 10, fontWeight: '700' },
   cardTitle: { minHeight: 36, marginTop: 5, color: COLORS.ink, fontSize: 13, fontWeight: '700', lineHeight: 18 },
   cardLocation: { marginTop: 4, color: COLORS.muted, fontSize: 11 },
+  cardListedTime: { marginTop: 4, color: COLORS.muted, fontSize: 10 },
   cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5, marginTop: 9, paddingTop: 7, borderTopWidth: 1, borderTopColor: COLORS.line },
   cardPrice: { flexShrink: 1, color: COLORS.navy, fontSize: 12, fontWeight: '800' },
   pricePeriod: { color: COLORS.muted, fontSize: 10, fontWeight: '400' },
@@ -707,6 +723,7 @@ export const styles = StyleSheet.create({
   detailTitle: { marginTop: 8, color: COLORS.navy, fontSize: 22, fontWeight: '700', letterSpacing: -0.7 },
   detailPrice: { marginTop: 6, color: COLORS.goldDark, fontSize: 23, fontWeight: '800' },
   detailLocation: { marginTop: 6, color: COLORS.muted, fontSize: 13 },
+  detailListedTime: { marginTop: 5, color: COLORS.muted, fontSize: 12 },
   divider: { height: 1, marginVertical: 15, backgroundColor: COLORS.line },
   detailHeading: { color: COLORS.ink, fontSize: 15, fontWeight: '700' },
   detailDescription: { marginTop: 7, color: COLORS.muted, fontSize: 14, lineHeight: 21 },

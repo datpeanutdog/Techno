@@ -21,7 +21,7 @@
                 </div>
                 <h1>{{ $listing->title }}</h1>
                 <p class="detail-price">₱{{ number_format((float) $listing->price) }}@if ($listing->type === 'rent') <span>/ {{ $listing->rent_period }}</span>@endif</p>
-                <div class="detail-meta"><span>⌖</span> {{ $listing->location }} <span class="meta-dot">·</span> Listed {{ $listing->created_at->diffForHumans() }}</div>
+                <div class="detail-meta"><span>⌖</span> {{ $listing->location }} <span class="meta-dot">·</span> <time datetime="{{ $listing->created_at->toIso8601String() }}" title="{{ $listing->created_at->format('M j, Y \a\t g:i A') }}">Listed {{ $listing->created_at->diffForHumans() }}</time></div>
                 <hr>
                 <h2>About this campus find</h2>
                 <p class="detail-description">{{ $listing->description }}</p>

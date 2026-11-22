@@ -7,6 +7,7 @@ use App\Models\Listing;
 use App\Support\ListingCategories;
 use App\Support\ListingData;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
@@ -26,23 +27,11 @@ class MarketplaceController extends Controller
             'category' => ['nullable', 'in:'.implode(',', ListingCategories::ALL)],
             'sort' => ['nullable', 'in:latest,price_low,price_high'],
             'view' => ['nullable', 'in:saved'],
-            'favorites' => [
-                'nullable',
-                'string',
-                'max:4000',
-                'regex:/\A[1-9][0-9]*(?:,[1-9][0-9]*)*\z/',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (is_string($value) && count(explode(',', $value)) > 500) {
-                        $fail('You can view up to 500 saved finds at a time.');
-                    }
-                },
-            ],
         ]);
 
         $isSavedView = ($filters['view'] ?? null) === 'saved';
-        $favoriteIds = isset($filters['favorites'])
-            ? array_values(array_unique(array_map('intval', explode(',', $filters['favorites']))))
-            : [];
+        $savedListingIds = $request->user()->savedListings()->pluck('listings.id')->map(fn (int $id): int => $id)->all();
+        $favoriteIds = $isSavedView ? $savedListingIds : [];
         sort($favoriteIds);
 
         $query = Listing::query()
@@ -87,6 +76,27 @@ class MarketplaceController extends Controller
             'categories' => ListingCategories::ALL,
             'isSavedView' => $isSavedView,
             'favoriteIds' => $favoriteIds,
+            'savedListingIds' => $savedListingIds,
+        ]);
+    }
+
+    public function saveListing(Request $request, Listing $listing): JsonResponse
+    {
+        $request->user()->savedListings()->syncWithoutDetaching([$listing->getKey()]);
+
+        return response()->json([
+            'saved' => true,
+            'listing_id' => $listing->getKey(),
+        ]);
+    }
+
+    public function unsaveListing(Request $request, Listing $listing): JsonResponse
+    {
+        $request->user()->savedListings()->detach($listing->getKey());
+
+        return response()->json([
+            'saved' => false,
+            'listing_id' => $listing->getKey(),
         ]);
     }
 
