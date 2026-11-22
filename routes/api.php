@@ -12,18 +12,23 @@ Route::post('/auth/login', [AccountController::class, 'login'])->middleware('thr
 Route::post('/auth/forgot-password', [AccountController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/auth/reset-password', [AccountController::class, 'resetPassword'])->middleware('throttle:5,1');
 Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
+    Route::post('/auth/verification-notification', [AccountController::class, 'sendVerificationNotification'])
+        ->middleware('throttle:6,1');
+    Route::get('/auth/me', [AccountController::class, 'me']);
+    Route::post('/auth/logout', [AccountController::class, 'logout']);
+    Route::get('/listings', [ListingController::class, 'index']);
+    Route::get('/listings/{slug}', [ListingController::class, 'show']);
+    Route::get('/sellers/{user}', [SellerController::class, 'show']);
+});
+
+Route::middleware(['auth:sanctum', 'account.active', 'verified'])->group(function (): void {
     Route::get('/conversations', [ConversationController::class, 'index']);
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
     Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'storeMessage'])
         ->middleware('throttle:30,1');
     Route::post('/listings/{listing}/messages', [ConversationController::class, 'storeForListing'])
         ->middleware('throttle:20,1');
-    Route::get('/listings', [ListingController::class, 'index']);
-    Route::get('/listings/{slug}', [ListingController::class, 'show']);
-    Route::get('/sellers/{user}', [SellerController::class, 'show']);
     Route::post('/sellers/{user}/reviews', [SellerController::class, 'review'])->middleware('throttle:5,1');
-    Route::get('/auth/me', [AccountController::class, 'me']);
-    Route::post('/auth/logout', [AccountController::class, 'logout']);
     Route::put('/auth/profile', [AccountController::class, 'updateProfile']);
     Route::get('/my-listings', [ListingController::class, 'mine']);
     Route::get('/my-listings/{id}', [ListingController::class, 'owned']);

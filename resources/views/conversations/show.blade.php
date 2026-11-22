@@ -19,7 +19,8 @@
         <div class="message-thread" aria-label="Conversation messages"
             data-live-messages
             data-updates-url="{{ route('conversations.messages.updates', $conversation) }}"
-            data-current-user="{{ auth()->id() }}">
+            data-current-user="{{ auth()->id() }}"
+            data-last-message-id="{{ $latestMessageId }}">
             @if ($messages->isNotEmpty())
                 @foreach ($messages as $message)
                     <article class="message-bubble {{ $message->sender_id === auth()->id() ? 'message-own' : '' }}" data-message-id="{{ $message->id }}">

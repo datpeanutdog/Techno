@@ -9,7 +9,7 @@
     <title>@yield('title', 'PASABUY — your neighborhood marketplace')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-@php($hasSidebar = auth()->check() && ! request()->routeIs('login', 'register', 'password.*', 'account.suspension.*'))
+@php($hasSidebar = auth()->check() && ! request()->routeIs('login', 'register', 'password.*', 'verification.*', 'account.suspension.*'))
 @php($isLandingPage = ! auth()->check() && request()->routeIs('marketplace.index'))
 <body>
     <div class="site-layout {{ $hasSidebar ? 'has-sidebar' : '' }} {{ $isLandingPage ? 'landing-layout' : '' }}">

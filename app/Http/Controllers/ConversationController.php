@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Conversation;
 use App\Models\Listing;
+use App\Notifications\NewConversationNotification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +54,7 @@ class ConversationController extends Controller
                 ->oldest('id')
                 ->paginate(50),
             'otherParticipant' => $conversation->otherParticipantFor($request->user()),
+            'latestMessageId' => $conversation->messages()->max('id') ?? 0,
         ]);
     }
 
@@ -80,6 +82,10 @@ class ConversationController extends Controller
 
             return $conversation;
         });
+
+        if ($conversation->wasRecentlyCreated && $conversation->seller->hasVerifiedEmail()) {
+            $conversation->seller->notify(new NewConversationNotification($conversation->id));
+        }
 
         return redirect()
             ->route('conversations.show', $conversation)

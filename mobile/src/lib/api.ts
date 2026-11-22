@@ -9,6 +9,7 @@ export type UserProfile = {
   account_identifier: string;
   name: string;
   email: string;
+  email_verified: boolean;
   role: 'admin' | 'user';
   bio: string | null;
   campus: string | null;
@@ -65,6 +66,22 @@ type ApiResponse<T> = {
   message?: string;
   errors?: Record<string, string[]>;
 };
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export function isApiErrorStatus(issue: unknown, status: number): issue is ApiError {
+  return issue instanceof ApiError && issue.status === status;
+}
+
+export function isEmailVerificationError(issue: unknown): issue is ApiError {
+  return isApiErrorStatus(issue, 403)
+    && issue.message.toLowerCase().includes('email address is not verified');
+}
 
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
@@ -160,7 +177,7 @@ export async function requestJson<T>(
     const validationMessage = result.errors
       ? Object.values(result.errors).flat().join('\n')
       : null;
-    throw new Error(validationMessage ?? result.message ?? `Request failed (${response.status}).`);
+    throw new ApiError(validationMessage ?? result.message ?? `Request failed (${response.status}).`, response.status);
   }
 
   return result;

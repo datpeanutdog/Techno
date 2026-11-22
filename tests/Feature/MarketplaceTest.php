@@ -367,25 +367,33 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('List an item');
     }
 
-    public function test_signed_in_users_can_post_without_email_verification(): void
+    public function test_unverified_users_can_browse_but_cannot_use_listing_features(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->unverified()->create();
 
-        $this->actingAs($user)->get(route('listings.create'))->assertOk();
-        $this->actingAs($user)->post(route('listings.store'), [
+        $this->actingAs($user)->get('/')->assertOk();
+        $this->actingAs($user)->get(route('listings.create'))
+            ->assertRedirect(route('verification.notice'));
+        $this->actingAs($user)->from(route('listings.create'))->post(route('listings.store'), [
             'title' => 'My lab coat',
             'description' => 'Clean lab coat for science class.',
             'price' => 90,
             'type' => 'sale',
             'category' => 'Uniforms',
             'location' => 'Science building',
-        ])->assertRedirect();
+        ])->assertRedirect(route('verification.notice'));
+
+        $this->assertDatabaseCount('listings', 0);
     }
 
-    public function test_email_verification_routes_are_not_enabled(): void
+    public function test_unverified_users_can_open_the_verification_notice(): void
     {
-        $this->get('/email/verify')->assertNotFound();
-        $this->post('/email/verification-notification')->assertNotFound();
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)->get(route('verification.notice'))
+            ->assertOk()
+            ->assertSee($user->email)
+            ->assertSee('Resend verification email');
     }
 
     public function test_users_cannot_edit_or_remove_other_users_listings(): void

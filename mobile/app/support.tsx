@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, styles } from '../App';
-import { clearAuthToken, getAuthToken, requestJson } from '../src/lib/api';
+import { clearAuthToken, getAuthToken, isEmailVerificationError, requestJson } from '../src/lib/api';
 import { MenuButton } from '../src/components/NavigationDrawer';
 
 const REPORT_CATEGORIES = [
@@ -58,7 +58,14 @@ export default function SupportScreen() {
 
   const loadReports = useCallback(async () => {
     if (!await getAuthToken()) {
-      router.replace({ pathname: '/account', params: { returnTo: 'support' } });
+      router.replace({
+        pathname: '/account',
+        params: {
+          returnTo: 'support',
+          ...(reportedUserId ? { reportedUserId } : {}),
+          ...(reportedUserName ? { reportedUserName } : {}),
+        },
+      });
       return;
     }
 
@@ -72,9 +79,20 @@ export default function SupportScreen() {
         router.replace({ pathname: '/account', params: { returnTo: 'support' } });
         return;
       }
+      if (isEmailVerificationError(issue)) {
+        router.replace({
+          pathname: '/account',
+          params: {
+            returnTo: 'support',
+            ...(reportedUserId ? { reportedUserId } : {}),
+            ...(reportedUserName ? { reportedUserName } : {}),
+          },
+        });
+        return;
+      }
       setError(detail);
     }
-  }, []);
+  }, [reportedUserId, reportedUserName]);
 
   useFocusEffect(useCallback(() => {
     void loadReports();
@@ -181,6 +199,17 @@ export default function SupportScreen() {
       setProofs([]);
       setMessage(result.message ?? 'Your report has been sent to customer support.');
     } catch (issue) {
+      if (isEmailVerificationError(issue)) {
+        router.replace({
+          pathname: '/account',
+          params: {
+            returnTo: 'support',
+            ...(reportedUserId ? { reportedUserId } : {}),
+            ...(reportedUserName ? { reportedUserName } : {}),
+          },
+        });
+        return;
+      }
       setError(issue instanceof Error ? issue.message : 'Your report could not be submitted.');
     } finally {
       setBusy(false);

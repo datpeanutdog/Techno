@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { COLORS, formatMobilePrice, styles } from '../../App';
-import { clearAuthToken, getAuthToken, Listing, requestJson } from '../../src/lib/api';
+import { clearAuthToken, getAuthToken, isEmailVerificationError, Listing, requestJson } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
 
 type SellerReview = {
@@ -60,7 +60,7 @@ export default function SellerProfileScreen() {
     void (async () => {
       try {
         if (!await getAuthToken()) {
-          router.replace('/account');
+          router.replace({ pathname: '/account', params: { returnTo: 'seller', sellerId: id } });
           return;
         }
 
@@ -106,6 +106,10 @@ export default function SellerProfileScreen() {
       if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
         await clearAuthToken();
         router.replace('/account');
+        return;
+      }
+      if (isEmailVerificationError(issue)) {
+        router.replace({ pathname: '/account', params: { returnTo: 'seller', sellerId: id } });
         return;
       }
       setError(detail);

@@ -10,6 +10,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SupportReportController;
 use App\Http\Controllers\SuspensionAppealController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -30,11 +31,37 @@ Route::post('/support', [SupportReportController::class, 'storeContact'])
     ->name('support.reports.contact.store');
 
 Route::middleware('auth')->group(function (): void {
-    Route::get('/sellers/{user}', [SellerController::class, 'show'])->name('sellers.show');
+    Route::get('/email/verify', function () {
+        return view('auth.verify-email', [
+            'isVerified' => auth()->user()->hasVerifiedEmail(),
+            'continueUrl' => session('url.intended', route('marketplace.index')),
+        ]);
+    })->name('verification.notice');
+    Route::get('/email/verification-status', fn () => response()->json([
+        'verified' => auth()->user()->hasVerifiedEmail(),
+    ]))->middleware('throttle:30,1')->name('verification.status');
+    Route::post('/email/verification-notification', [AccountController::class, 'sendVerificationNotification'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+    Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
+    Route::get('/sellers/{user}', [SellerController::class, 'show'])
+        ->middleware('verified')
+        ->name('sellers.show');
 });
 
+Route::get('/email/verify/{id}/{hash}', function (string $id, string $hash) {
+    $user = User::findOrFail($id);
+    abort_unless(hash_equals(sha1($user->getEmailForVerification()), $hash), 403);
+
+    if (! $user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+    }
+
+    return redirect()->intended(route('marketplace.index'))
+        ->with('status', 'Your email address has been verified.');
+})->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+
 Route::middleware('auth')->group(function (): void {
-    Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
     Route::get('/account/suspension', [SuspensionAppealController::class, 'show'])->name('account.suspension.show');
     Route::post('/account/suspension/appeals', [SuspensionAppealController::class, 'store'])
         ->middleware('throttle:5,1,counter-appeal-v2:')
@@ -43,7 +70,7 @@ Route::middleware('auth')->group(function (): void {
         ->name('account.suspension.appeals.proof');
 });
 
-Route::middleware(['auth', 'account.active'])->group(function (): void {
+Route::middleware(['auth', 'account.active', 'verified'])->group(function (): void {
     Route::prefix('/admin/users')
         ->name('admin.users.')
         ->middleware('can:manage-users')
@@ -111,5 +138,5 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
 });
 
 Route::get('/listings/{listing:slug}', [MarketplaceController::class, 'show'])
-    ->middleware('auth')
+    ->middleware(['auth', 'verified'])
     ->name('listings.show');

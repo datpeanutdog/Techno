@@ -18,6 +18,7 @@ import {
   clearAuthToken,
   Conversation,
   getAuthToken,
+  isEmailVerificationError,
   Listing,
   requestJson,
 } from '../../src/lib/api';
@@ -96,6 +97,13 @@ export default function NewMessageScreen() {
       const detail = issue instanceof Error ? issue.message : 'Your message could not be sent.';
       if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
         await clearAuthToken();
+        router.replace({
+          pathname: '/account',
+          params: { returnTo: 'message', listingSlug },
+        });
+        return;
+      }
+      if (isEmailVerificationError(issue)) {
         router.replace({
           pathname: '/account',
           params: { returnTo: 'message', listingSlug },

@@ -2,10 +2,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +21,7 @@ import { COLORS, styles } from '../App';
 import {
   clearAuthToken,
   getAuthToken,
+  isApiErrorStatus,
   Listing,
   requestJson,
   saveAuthToken,
@@ -34,7 +36,23 @@ function getExternalAvatarUrl(avatarUrl: string | null): string {
 }
 
 export default function AccountScreen() {
-  const { returnTo, listingSlug } = useLocalSearchParams<{ returnTo?: string; listingSlug?: string }>();
+  const {
+    returnTo,
+    listingSlug,
+    editId,
+    conversationId,
+    sellerId,
+    reportedUserId,
+    reportedUserName,
+  } = useLocalSearchParams<{
+    returnTo?: string;
+    listingSlug?: string;
+    editId?: string;
+    conversationId?: string;
+    sellerId?: string;
+    reportedUserId?: string;
+    reportedUserName?: string;
+  }>();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [mode, setMode] = useState<AccountMode>('login');
@@ -49,41 +67,140 @@ export default function AccountScreen() {
   const bio = useRef('');
   const campus = useRef('');
   const avatarUrl = useRef('');
+  const previousVerificationState = useRef<boolean | null>(null);
 
-  const loadAccount = useCallback(async () => {
-    if (!await getAuthToken()) {
-      setUser(null);
-      setListings([]);
-      return;
+  const resumeDestination = useCallback((): boolean => {
+    if (returnTo === 'sell') {
+      router.replace(editId ? { pathname: '/sell', params: { editId } } : '/sell');
+      return true;
+    }
+    if (returnTo === 'support') {
+      router.replace({
+        pathname: '/support',
+        params: {
+          ...(reportedUserId ? { reportedUserId } : {}),
+          ...(reportedUserName ? { reportedUserName } : {}),
+        },
+      });
+      return true;
+    }
+    if (returnTo === 'messages') {
+      router.replace('/messages');
+      return true;
+    }
+    if (returnTo === 'message' && typeof listingSlug === 'string') {
+      router.replace({ pathname: '/messages/new', params: { listingSlug } });
+      return true;
+    }
+    if (returnTo === 'conversation' && typeof conversationId === 'string') {
+      router.replace({ pathname: '/messages/[id]', params: { id: conversationId } });
+      return true;
+    }
+    if (returnTo === 'seller' && typeof sellerId === 'string') {
+      router.replace({ pathname: '/seller/[id]', params: { id: sellerId } });
+      return true;
     }
 
+    return false;
+  }, [conversationId, editId, listingSlug, reportedUserId, reportedUserName, returnTo, sellerId]);
+
+  const loadAccount = useCallback(async (): Promise<UserProfile | null> => {
     try {
-      const [profile, mine] = await Promise.all([
-        requestJson<UserProfile>('/auth/me'),
-        requestJson<Listing[]>('/my-listings'),
-      ]);
+      if (!await getAuthToken()) {
+        setUser(null);
+        setListings([]);
+        previousVerificationState.current = null;
+        return null;
+      }
+
+      const profile = await requestJson<UserProfile>('/auth/me');
       setUser(profile.data);
       name.current = profile.data.name;
       email.current = profile.data.email;
       bio.current = profile.data.bio ?? '';
       campus.current = profile.data.campus ?? '';
       avatarUrl.current = getExternalAvatarUrl(profile.data.avatar_url);
+
+      const wasVerified = previousVerificationState.current;
+      previousVerificationState.current = profile.data.email_verified;
+      if (!profile.data.email_verified) {
+        setListings([]);
+        return profile.data;
+      }
+
+      if (wasVerified === false) {
+        setMessage('Your email address has been verified.');
+      }
+      if ((wasVerified === false || wasVerified === null) && resumeDestination()) {
+        return profile.data;
+      }
+
+      const mine = await requestJson<Listing[]>('/my-listings');
       setListings(mine.data);
+      setError('');
+      return profile.data;
     } catch (issue) {
       const detail = issue instanceof Error ? issue.message : 'Your account could not be loaded.';
-      if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
+      if (isApiErrorStatus(issue, 401)) {
         await clearAuthToken();
         setUser(null);
         setListings([]);
-        return;
+        previousVerificationState.current = null;
+        return null;
       }
       setError(detail);
+      return null;
     }
-  }, []);
+  }, [resumeDestination]);
 
   useFocusEffect(useCallback(() => {
     void loadAccount();
   }, [loadAccount]));
+
+  const needsEmailVerification = user?.email_verified === false;
+
+  useEffect(() => {
+    if (!needsEmailVerification) {
+      return undefined;
+    }
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void loadAccount();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [loadAccount, needsEmailVerification]);
+
+  const resendVerificationEmail = async () => {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await requestJson<never>('/auth/verification-notification', {
+        method: 'POST',
+      });
+      setMessage(result.message ?? 'A verification link has been sent to your email address.');
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : 'The verification email could not be sent.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const checkVerificationStatus = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const profile = await loadAccount();
+      if (profile && !profile.email_verified) {
+        setMessage('Your email is not verified yet. Open the link in your email, then check again.');
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submitAccountForm = async () => {
     setBusy(true);
@@ -120,17 +237,16 @@ export default function AccountScreen() {
       await saveAuthToken(result.token);
       setUser(result.data);
       setNameFromProfile(result.data);
+      previousVerificationState.current = result.data.email_verified;
+      if (!result.data.email_verified) {
+        setListings([]);
+        setMessage('Check your email to verify your account. You can browse while you wait, but messaging and listing features need verification.');
+        return;
+      }
+
       setMessage(mode === 'register' ? result.message ?? 'Your account is ready.' : 'You are signed in.');
       await loadAccount();
-      if (returnTo === 'sell') {
-        router.replace('/sell');
-      } else if (returnTo === 'support') {
-        router.replace('/support');
-      } else if (returnTo === 'messages') {
-        router.replace('/messages');
-      } else if (returnTo === 'message' && typeof listingSlug === 'string') {
-        router.replace({ pathname: '/messages/new', params: { listingSlug } });
-      } else {
+      if (!resumeDestination()) {
         router.replace('/');
       }
     } catch (issue) {
@@ -225,6 +341,7 @@ export default function AccountScreen() {
       await clearAuthToken();
       setUser(null);
       setListings([]);
+      previousVerificationState.current = null;
       setBusy(false);
     }
   };
@@ -288,7 +405,7 @@ export default function AccountScreen() {
           <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} keyboardShouldPersistTaps="handled">
             {error ? <Text style={styles.formError}>{error}</Text> : null}
             {message ? <Text style={styles.formSubheading}>{message}</Text> : null}
-            {user ? (
+            {user ? (user.email_verified ? (
               <>
                 <View style={styles.formCard}>
                   <Text style={styles.formHeading}>Your student profile</Text>
@@ -354,6 +471,37 @@ export default function AccountScreen() {
                 </View>
               </>
             ) : (
+              <View style={styles.formCard}>
+                <Text style={styles.formHeading}>Verify your email</Text>
+                <Text style={styles.formSubheading}>
+                  We sent a verification link to {user.email}. Open the link in your email, then return to PASABUY.
+                </Text>
+                <Text style={[styles.formSubheading, { marginTop: 10 }]}>
+                  You can browse while you wait. Messaging, listing, and other account features unlock after verification.
+                </Text>
+                <Pressable
+                  disabled={busy}
+                  onPress={() => void resendVerificationEmail()}
+                  style={[styles.primaryButton, { marginTop: 16 }, busy && styles.disabledButton]}
+                >
+                  {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Resend verification email</Text>}
+                </Pressable>
+                <Pressable
+                  disabled={busy}
+                  onPress={() => void checkVerificationStatus()}
+                  style={[styles.primaryButton, { marginTop: 10, backgroundColor: COLORS.paleNeutral }, busy && styles.disabledButton]}
+                >
+                  {busy ? <ActivityIndicator color={COLORS.navy} /> : <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>I’ve verified my email</Text>}
+                </Pressable>
+                <Pressable
+                  disabled={busy}
+                  onPress={() => void logout()}
+                  style={[styles.primaryButton, { marginTop: 10, backgroundColor: COLORS.paleNeutral }, busy && styles.disabledButton]}
+                >
+                  <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>Log out</Text>
+                </Pressable>
+              </View>
+            )) : (
               <View style={styles.formCard}>
                 <Text style={styles.formHeading}>{mode === 'register' ? 'Create your account' : mode === 'forgot' ? 'Reset your password' : 'Log in to PASABUY'}</Text>
                 <Text style={styles.formSubheading}>Your account lets you post and manage school-related items.</Text>

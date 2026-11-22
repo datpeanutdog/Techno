@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { COLORS, CATEGORY_ICONS, ChoiceChip, Label, styles } from '../App';
-import { getAuthToken, Listing, ListingType, requestJson } from '../src/lib/api';
+import { getAuthToken, isEmailVerificationError, Listing, ListingType, requestJson } from '../src/lib/api';
 import { MenuButton } from '../src/components/NavigationDrawer';
 
 const categories = Object.keys(CATEGORY_ICONS);
@@ -44,7 +44,10 @@ export default function SellScreen() {
     let active = true;
     void (async () => {
       if (!await getAuthToken()) {
-        router.replace({ pathname: '/account', params: { returnTo: 'sell' } });
+        router.replace({
+          pathname: '/account',
+          params: { returnTo: 'sell', ...(editId ? { editId } : {}) },
+        });
         return;
       }
 
@@ -68,6 +71,13 @@ export default function SellScreen() {
         setCategory(current.category);
         setCondition(current.condition ?? '');
       } catch (issue) {
+        if (isEmailVerificationError(issue)) {
+          router.replace({
+            pathname: '/account',
+            params: { returnTo: 'sell', ...(editId ? { editId } : {}) },
+          });
+          return;
+        }
         if (active) setError(issue instanceof Error ? issue.message : 'This listing could not be loaded.');
       } finally {
         if (active) setLoadingListing(false);
@@ -148,6 +158,13 @@ export default function SellScreen() {
 
       router.replace({ pathname: '/listing/[slug]', params: { slug: result.data.slug } });
     } catch (issue) {
+      if (isEmailVerificationError(issue)) {
+        router.replace({
+          pathname: '/account',
+          params: { returnTo: 'sell', ...(editId ? { editId } : {}) },
+        });
+        return;
+      }
       setError(issue instanceof Error ? issue.message : 'Your listing could not be posted.');
     } finally {
       setPosting(false);

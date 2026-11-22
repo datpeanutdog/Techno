@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -23,12 +24,26 @@ class AccountController extends Controller
         ]);
 
         $user = User::create($data);
+        event(new Registered($user));
 
         return response()->json([
             'data' => $this->userPayload($user),
             'token' => $user->createToken('pasabuy-mobile')->plainTextToken,
-            'message' => 'Your account is ready.',
+            'message' => 'Check your email to verify your account before using PASABUY features.',
         ], 201);
+    }
+
+    public function sendVerificationNotification(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Your email address is already verified.']);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return response()->json(['message' => 'A verification link has been sent to your email address.'], 202);
     }
 
     public function login(Request $request): JsonResponse
@@ -127,7 +142,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @return array{id: int, account_identifier: string, name: string, email: string, role: string, bio: ?string, campus: ?string, avatar_url: ?string}
+     * @return array{id: int, account_identifier: string, name: string, email: string, email_verified: bool, role: string, bio: ?string, campus: ?string, avatar_url: ?string}
      */
     private function userPayload(User $user): array
     {
@@ -136,6 +151,7 @@ class AccountController extends Controller
             'account_identifier' => $user->account_identifier,
             'name' => $user->name,
             'email' => $user->email,
+            'email_verified' => $user->hasVerifiedEmail(),
             'role' => $user->role,
             'bio' => $user->bio,
             'campus' => $user->campus,

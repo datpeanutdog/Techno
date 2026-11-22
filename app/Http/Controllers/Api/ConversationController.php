@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Listing;
 use App\Models\User;
+use App\Notifications\NewConversationNotification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -93,6 +94,10 @@ class ConversationController extends Controller
 
             return $conversation;
         });
+
+        if ($conversation->wasRecentlyCreated && $conversation->seller->hasVerifiedEmail()) {
+            $conversation->seller->notify(new NewConversationNotification($conversation->id));
+        }
 
         $this->loadConversationPayloadRelations($conversation, $user);
 

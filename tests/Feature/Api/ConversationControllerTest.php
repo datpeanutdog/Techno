@@ -5,7 +5,9 @@ namespace Tests\Feature\Api;
 use App\Models\Conversation;
 use App\Models\Listing;
 use App\Models\User;
+use App\Notifications\NewConversationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ConversationControllerTest extends TestCase
@@ -19,6 +21,8 @@ class ConversationControllerTest extends TestCase
 
     public function test_mobile_can_start_a_conversation_about_a_listing(): void
     {
+        Notification::fake();
+
         $seller = User::factory()->create(['name' => 'Sam Seller']);
         $buyer = User::factory()->create(['name' => 'Bailey Buyer']);
         $listing = $this->createListing($seller);
@@ -42,6 +46,23 @@ class ConversationControllerTest extends TestCase
             'sender_id' => $buyer->id,
             'body' => 'Can I pick this up after class?',
         ]);
+        Notification::assertSentTo($seller, NewConversationNotification::class);
+    }
+
+    public function test_mobile_does_not_email_an_unverified_seller_about_a_new_conversation(): void
+    {
+        Notification::fake();
+
+        $seller = User::factory()->unverified()->create();
+        $buyer = User::factory()->create();
+        $listing = $this->createListing($seller);
+
+        $this->actingAs($buyer, 'sanctum')->postJson(
+            '/api/listings/'.$listing->slug.'/messages',
+            ['body' => 'Can I pick this up after class?'],
+        )->assertCreated();
+
+        Notification::assertNotSentTo($seller, NewConversationNotification::class);
     }
 
     public function test_mobile_inbox_shows_only_participant_conversations_and_unread_counts(): void

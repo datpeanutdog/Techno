@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,10 +29,22 @@ class AccountController extends Controller
         ]);
 
         $user = User::create($data);
+        event(new Registered($user));
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('marketplace.index'));
+        return redirect()->route('verification.notice');
+    }
+
+    public function sendVerificationNotification(Request $request): RedirectResponse
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->intended(route('marketplace.index'));
+        }
+
+        $request->user()->sendEmailVerificationNotification();
+
+        return back()->with('status', 'A fresh verification link has been sent to your email address.');
     }
 
     public function loginForm(): View

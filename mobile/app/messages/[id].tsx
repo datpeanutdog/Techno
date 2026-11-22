@@ -23,6 +23,7 @@ import {
   clearAuthToken,
   ConversationThread,
   getAuthToken,
+  isEmailVerificationError,
   requestJson,
 } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
@@ -56,7 +57,7 @@ export default function ConversationScreen() {
 
     try {
       if (!await getAuthToken()) {
-        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
         return false;
       }
 
@@ -75,7 +76,11 @@ export default function ConversationScreen() {
       const detail = issue instanceof Error ? issue.message : 'This conversation could not be loaded.';
       if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
         await clearAuthToken();
-        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
+        return false;
+      }
+      if (isEmailVerificationError(issue)) {
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
         return false;
       }
       setError(detail);
@@ -89,7 +94,7 @@ export default function ConversationScreen() {
   const pollConversation = useCallback(async (): Promise<boolean> => {
     try {
       if (!await getAuthToken()) {
-        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
         return false;
       }
 
@@ -113,7 +118,11 @@ export default function ConversationScreen() {
       const detail = issue instanceof Error ? issue.message : 'New messages could not be checked.';
       if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
         await clearAuthToken();
-        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
+        return false;
+      }
+      if (isEmailVerificationError(issue)) {
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
         return false;
       }
       setLiveError(detail);
@@ -181,6 +190,10 @@ export default function ConversationScreen() {
       });
       setBody('');
     } catch (issue) {
+      if (isEmailVerificationError(issue)) {
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
+        return;
+      }
       setError(issue instanceof Error ? issue.message : 'Your message could not be sent.');
     } finally {
       setSending(false);

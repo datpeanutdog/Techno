@@ -16,6 +16,7 @@ import {
   clearAuthToken,
   Conversation,
   getAuthToken,
+  isEmailVerificationError,
   requestJson,
   UserProfile,
 } from '../lib/api';
@@ -92,12 +93,23 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
       return;
     }
 
-    const result = await requestJson<Conversation[]>('/conversations');
-    const nextUnreadCount = unreadMessageCount(result.data);
+    let conversations: Conversation[];
+    try {
+      conversations = (await requestJson<Conversation[]>('/conversations')).data;
+    } catch (issue) {
+      if (isEmailVerificationError(issue)) {
+        previousUnreadCounts.current = null;
+        setUnreadCount(0);
+        return;
+      }
+
+      throw issue;
+    }
+    const nextUnreadCount = unreadMessageCount(conversations);
     const previousCounts = previousUnreadCounts.current;
     const newMessages = previousCounts === null
       ? 0
-      : result.data.reduce(
+      : conversations.reduce(
           (total, conversation) => total + Math.max(
             0,
             conversation.unread_messages_count - (previousCounts[conversation.id] ?? 0),
@@ -124,7 +136,7 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
     }
 
     previousUnreadCounts.current = Object.fromEntries(
-      result.data.map((conversation) => [conversation.id, conversation.unread_messages_count]),
+      conversations.map((conversation) => [conversation.id, conversation.unread_messages_count]),
     );
   }, []);
 
@@ -261,7 +273,9 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
                   <Text style={drawerStyles.profileName} numberOfLines={1}>
                     {profile?.name ?? 'Your profile'}
                   </Text>
-                  <Text style={drawerStyles.profileAction}>Customize your profile  ›</Text>
+                  <Text style={drawerStyles.profileAction}>
+                    {profile?.email_verified ? 'Customize your profile' : 'Verify your email'}  ›
+                  </Text>
                 </View>
                 <Text style={drawerStyles.profileArrow}>›</Text>
               </Pressable>

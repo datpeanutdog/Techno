@@ -17,6 +17,7 @@ import {
   clearAuthToken,
   Conversation,
   getAuthToken,
+  isEmailVerificationError,
   requestJson,
 } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
@@ -51,6 +52,10 @@ export default function MessagesScreen() {
       const detail = issue instanceof Error ? issue.message : 'Your messages could not be loaded.';
       if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
         await clearAuthToken();
+        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        return;
+      }
+      if (isEmailVerificationError(issue)) {
         router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
         return;
       }
