@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', (isset($listing) ? 'Edit your listing' : 'Post a campus find').' — PASABUY')
+@section('title', (isset($listing) ? 'Edit your listing' : 'Post a campus find').' — Pasabuy')
 
 @section('content')
     <div class="create-shell">
@@ -75,7 +75,7 @@
 
                 <label class="form-label" for="location">Campus or pickup area <span>*</span></label>
                 <input class="form-control" id="location" name="location" value="{{ old('location', $listing->location ?? '') }}" maxlength="100" placeholder="For example, main campus or campus library" required>
-                <p class="form-help">Posted by {{ auth()->user()->name }} from your PASABUY account.</p>
+                <p class="form-help">Posted by {{ auth()->user()->name }} from your Pasabuy account.</p>
 
                 <label class="form-label" for="image">Upload a photo <span class="optional-label">optional</span></label>
                 <input class="form-control" id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp">

@@ -130,6 +130,16 @@ class SupportReportTest extends TestCase
             ->assertSee('name="contact_email"', false);
     }
 
+    public function test_signed_in_user_opens_customer_support_instead_of_report_history(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('support.reports.index'))
+            ->assertOk()
+            ->assertSee('Contact customer support')
+            ->assertSee('name="contact_email"', false)
+            ->assertDontSee('Your submitted support reports');
+    }
+
     public function test_guest_can_contact_support_without_an_account(): void
     {
         $this->post(route('support.reports.contact.store'), [

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'PASABUY — your campus marketplace')
+@section('title', 'Pasabuy — your campus marketplace')
 
 @section('content')
     <section class="discover-section {{ $isSavedView ? 'saved-only-section' : '' }}" id="discover">
@@ -111,7 +111,7 @@
                                 @endif
                             </a>
                             <span class="listing-badge {{ $listing->type === 'rent' ? 'badge-rent' : '' }}">{{ $listing->type === 'rent' ? 'For rent' : 'For sale' }}</span>
-                            <button class="favorite-button" type="button" data-favorite="{{ $listing->id }}" aria-label="Save {{ $listing->title }}" aria-pressed="false">
+                            <button class="favorite-button" type="button" data-favorite="{{ $listing->id }}" data-save-url="{{ route('saved-listings.store', $listing) }}" data-unsave-url="{{ route('saved-listings.destroy', $listing) }}" aria-label="{{ in_array($listing->id, $savedListingIds, true) ? 'Remove' : 'Save' }} {{ $listing->title }}" aria-pressed="{{ in_array($listing->id, $savedListingIds, true) ? 'true' : 'false' }}">
                                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.75 3.75h10.5A1.75 1.75 0 0 1 19 5.5v15l-7-4.5-7 4.5v-15a1.75 1.75 0 0 1 1.75-1.75Z"/></svg>
                             </button>
                         </div>
@@ -122,6 +122,7 @@
                             </div>
                             <a class="listing-title" href="{{ route('listings.show', $listing) }}">{{ $listing->title }}</a>
                             <div class="listing-meta"><span aria-hidden="true">⌖</span> {{ $listing->location }}</div>
+                            <time class="listing-added" datetime="{{ $listing->created_at->toIso8601String() }}" title="{{ $listing->created_at->format('M j, Y \a\t g:i A') }}">Listed {{ $listing->created_at->diffForHumans() }}</time>
                             @if ($listing->user)
                                 <a class="seller-profile-link" href="{{ route('sellers.show', $listing->user) }}">
                                     {{ $listing->user->name }}

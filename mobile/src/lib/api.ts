@@ -32,6 +32,7 @@ export type Listing = {
   seller_initials: string;
   seller_rating: string | number;
   condition: string | null;
+  created_at: string;
   user?: Pick<UserProfile, 'id' | 'name' | 'bio' | 'campus' | 'avatar_url'> & {
     received_reviews_count?: number;
     received_reviews_avg_rating?: number | string | null;
@@ -138,12 +139,12 @@ export async function requestJson<T>(
   } catch {
     if (controller.signal.aborted) {
       throw new Error(
-        `PASABUY took too long to respond. Check that Laravel is running on port 8000 and your phone can reach this address:\n\n${API_BASE_URL}`,
+        `Pasabuy took too long to respond. Check that Laravel is running on port 8000 and your phone can reach this address:\n\n${API_BASE_URL}`,
       );
     }
 
     throw new Error(
-      `Can't reach PASABUY right now. Check that Laravel is running and your phone is on the same Wi-Fi.\n\nAPI: ${API_BASE_URL}`,
+      `Can't reach Pasabuy right now. Check that Laravel is running and your phone is on the same Wi-Fi.\n\nAPI: ${API_BASE_URL}`,
     );
   } finally {
     clearTimeout(timeout);
@@ -151,7 +152,7 @@ export async function requestJson<T>(
 
   if (controller.signal.aborted) {
     throw new Error(
-      `PASABUY took too long to respond. Check that Laravel is running on port 8000 and your phone can reach this address:\n\n${API_BASE_URL}`,
+      `Pasabuy took too long to respond. Check that Laravel is running on port 8000 and your phone can reach this address:\n\n${API_BASE_URL}`,
     );
   }
 

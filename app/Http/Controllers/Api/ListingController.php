@@ -89,6 +89,41 @@ class ListingController extends Controller
         return response()->json(['data' => $listing], 201);
     }
 
+    public function save(Request $request, int $listing): JsonResponse
+    {
+        $listingModel = Listing::query()->findOrFail($listing);
+        $request->user()->savedListings()->syncWithoutDetaching([$listingModel->getKey()]);
+
+        return response()->json([
+            'saved' => true,
+            'listing_id' => $listingModel->getKey(),
+        ]);
+    }
+
+    public function saved(Request $request): JsonResponse
+    {
+        $listingIds = $request->user()
+            ->savedListings()
+            ->where('is_available', true)
+            ->whereIn('category', ListingCategories::ALL)
+            ->pluck('listings.id')
+            ->map(fn (int $id): int => $id)
+            ->values();
+
+        return response()->json(['data' => $listingIds]);
+    }
+
+    public function unsave(Request $request, int $listing): JsonResponse
+    {
+        $listingModel = Listing::query()->findOrFail($listing);
+        $request->user()->savedListings()->detach($listingModel->getKey());
+
+        return response()->json([
+            'saved' => false,
+            'listing_id' => $listingModel->getKey(),
+        ]);
+    }
+
     public function mine(Request $request): JsonResponse
     {
         return response()->json(['data' => $request->user()->listings()->latest()->get()]);

@@ -85,7 +85,7 @@ export default function SupportScreen() {
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Photo access needed', 'Allow PASABUY to access selected photos for your support report.');
+      Alert.alert('Photo access needed', 'Allow Pasabuy to access selected photos for your support report.');
       return;
     }
 

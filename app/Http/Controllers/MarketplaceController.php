@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Listing;
 use App\Support\ListingCategories;
 use App\Support\ListingData;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -40,8 +41,8 @@ class MarketplaceController extends Controller
         ]);
 
         $isSavedView = ($filters['view'] ?? null) === 'saved';
-        $favoriteIds = isset($filters['favorites'])
-            ? array_values(array_unique(array_map('intval', explode(',', $filters['favorites']))))
+        $favoriteIds = $isSavedView
+            ? $request->user()->savedListings()->pluck('listings.id')->map(fn (int $id): int => $id)->all()
             : [];
         sort($favoriteIds);
 
@@ -87,6 +88,27 @@ class MarketplaceController extends Controller
             'categories' => ListingCategories::ALL,
             'isSavedView' => $isSavedView,
             'favoriteIds' => $favoriteIds,
+            'savedListingIds' => $request->user()->savedListings()->pluck('listings.id')->map(fn (int $id): int => $id)->all(),
+        ]);
+    }
+
+    public function saveListing(Request $request, Listing $listing): JsonResponse
+    {
+        $request->user()->savedListings()->syncWithoutDetaching([$listing->getKey()]);
+
+        return response()->json([
+            'saved' => true,
+            'listing_id' => $listing->getKey(),
+        ]);
+    }
+
+    public function unsaveListing(Request $request, Listing $listing): JsonResponse
+    {
+        $request->user()->savedListings()->detach($listing->getKey());
+
+        return response()->json([
+            'saved' => false,
+            'listing_id' => $listing->getKey(),
         ]);
     }
 
@@ -126,7 +148,7 @@ class MarketplaceController extends Controller
 
         return redirect()
             ->route('listings.show', $listing)
-            ->with('status', 'Your listing is live. Thanks for being part of PASABUY!');
+            ->with('status', 'Your listing is live. Thanks for being part of Pasabuy!');
     }
 
     public function myListings(Request $request): View

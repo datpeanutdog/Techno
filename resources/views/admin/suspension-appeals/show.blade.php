@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Review suspension appeal — PASABUY Admin')
+@section('title', 'Review suspension appeal — Pasabuy Admin')
 
 @section('content')
     <div class="support-shell">

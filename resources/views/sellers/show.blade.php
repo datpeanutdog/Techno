@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $seller->name.' — seller profile | PASABUY')
+@section('title', $seller->name.' — seller profile | Pasabuy')
 
 @section('content')
     @php
@@ -18,7 +18,7 @@
                 @endif
             </div>
             <div class="seller-profile-copy">
-                <p class="eyebrow">PASABUY student seller</p>
+                <p class="eyebrow">Pasabuy student seller</p>
                 <h1>{{ $seller->name }}</h1>
                 <p class="seller-profile-campus">{{ $seller->campus ?: 'Campus community member' }}</p>
                 @if ($seller->bio)
@@ -60,6 +60,7 @@
                                 <span class="listing-category">{{ $listing->category }}</span>
                                 <a class="listing-title" href="{{ route('listings.show', $listing) }}">{{ $listing->title }}</a>
                                 <div class="listing-meta"><span aria-hidden="true">⌖</span> {{ $listing->location }}</div>
+                                <time class="listing-added" datetime="{{ $listing->created_at->toIso8601String() }}" title="{{ $listing->created_at->format('M j, Y \a\t g:i A') }}">Listed {{ $listing->created_at->diffForHumans() }}</time>
                                 <div class="listing-card-bottom">
                                     <p class="listing-price">₱{{ number_format((float) $listing->price, $listing->price == (int) $listing->price ? 0 : 2) }}@if ($listing->type === 'rent')<span> / {{ $listing->rent_period }}</span>@endif</p>
                                     <span class="listing-badge {{ $listing->type === 'rent' ? 'badge-rent' : '' }}">{{ $listing->type === 'rent' ? 'For rent' : 'For sale' }}</span>
@@ -146,7 +147,7 @@
             @else
                 <p class="seller-empty-state">No reviews yet. Be the first to share feedback.</p>
             @endif
-            <p class="seller-review-note">Reviews are submitted by PASABUY members and are not independently verified as completed transactions.</p>
+            <p class="seller-review-note">Reviews are submitted by Pasabuy members and are not independently verified as completed transactions.</p>
         </section>
     </div>
 @endsection

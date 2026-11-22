@@ -6,8 +6,12 @@ use App\Models\Conversation;
 use App\Models\Listing;
 use App\Models\Message;
 use App\Models\User;
+use App\Notifications\NewConversationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Part\DataPart;
 use Tests\TestCase;
 
 class ConversationTest extends TestCase
@@ -69,17 +73,76 @@ class ConversationTest extends TestCase
 
     public function test_buyer_reuses_the_existing_conversation_for_the_same_listing(): void
     {
+        Notification::fake();
+
         $seller = User::factory()->create();
         $buyer = User::factory()->create();
         $listing = $this->createListing($seller);
 
         $conversation = $this->startConversation($buyer, $listing);
+        Notification::assertSentTo($seller, NewConversationNotification::class);
+
         $this->actingAs($buyer)->post(route('listings.messages.store', $listing), [
             'body' => 'I have another question.',
         ])->assertRedirect(route('conversations.show', $conversation));
 
+        Notification::assertSentToTimes($seller, NewConversationNotification::class, 1);
         $this->assertDatabaseCount('conversations', 1);
         $this->assertDatabaseCount('messages', 2);
+    }
+
+    public function test_new_conversation_email_does_not_expose_private_message_content(): void
+    {
+        Notification::fake();
+
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create();
+        $listing = $this->createListing($seller);
+        $conversation = $this->startConversation($buyer, $listing, 'Private offer details.');
+
+        Notification::assertSentTo(
+            $seller,
+            NewConversationNotification::class,
+            function (NewConversationNotification $notification) use ($conversation, $seller): bool {
+                $mail = $notification->toMail($seller);
+                $html = view($mail->view['html'], $mail->viewData)->render();
+                $text = view($mail->view['text'], $mail->viewData)->render();
+                $conversationUrl = route('conversations.show', $conversation);
+                $email = new Email;
+
+                foreach ($mail->callbacks as $callback) {
+                    $callback($email);
+                }
+
+                $embeddedLogo = $email->getAttachments()[0] ?? null;
+
+                return $mail->subject === 'A new Pasabuy conversation is waiting'
+                    && str_contains($html, 'NEW CONVERSATION')
+                    && str_contains($html, 'Open your messages')
+                    && str_contains($html, 'src="cid:pasabuy-logo@pasabuy"')
+                    && str_contains($html, 'href="'.$conversationUrl.'"')
+                    && str_contains($html, $conversationUrl)
+                    && str_contains($text, $conversationUrl)
+                    && $embeddedLogo instanceof DataPart
+                    && $embeddedLogo->getMediaType() === 'image'
+                    && ! str_contains($html, 'Private offer details.')
+                    && ! str_contains($text, 'Private offer details.');
+            },
+        );
+        Notification::assertNotSentTo($buyer, NewConversationNotification::class);
+    }
+
+    public function test_new_conversation_does_not_email_an_unverified_seller(): void
+    {
+        Notification::fake();
+
+        $seller = User::factory()->unverified()->create();
+        $buyer = User::factory()->create();
+        $listing = $this->createListing($seller);
+
+        $this->startConversation($buyer, $listing);
+
+        Notification::assertNotSentTo($seller, NewConversationNotification::class);
     }
 
     public function test_inbox_shows_only_a_participants_conversations_and_unread_count(): void
@@ -109,11 +172,14 @@ class ConversationTest extends TestCase
         $listing = $this->createListing($seller);
         $conversation = $this->startConversation($buyer, $listing);
 
+        Notification::fake();
+
         $this->actingAs($stranger)->get(route('conversations.show', $conversation))->assertNotFound();
         $this->actingAs($stranger)->post(route('conversations.messages.store', $conversation), [
             'body' => 'I should not be able to read or send this.',
         ])->assertNotFound();
 
+        Notification::assertNothingSent();
         $this->assertDatabaseCount('messages', 1);
     }
 
@@ -160,6 +226,23 @@ class ConversationTest extends TestCase
             ->assertJsonPath('data.sender_id', $buyer->id)
             ->assertJsonPath('data.sender_name', $buyer->name)
             ->assertJsonPath('data.body', 'I can meet after class.');
+    }
+
+    public function test_conversation_page_tracks_the_latest_message_id_for_live_updates(): void
+    {
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create();
+        $listing = $this->createListing($seller);
+        $conversation = $this->startConversation($buyer, $listing);
+        $latestMessage = $conversation->messages()->create([
+            'sender_id' => $seller->id,
+            'body' => 'This one is newest.',
+        ]);
+
+        $this->actingAs($buyer)
+            ->get(route('conversations.show', $conversation))
+            ->assertOk()
+            ->assertSee('data-last-message-id="'.$latestMessage->id.'"', false);
     }
 
     public function test_sellers_cannot_start_a_conversation_with_themselves(): void

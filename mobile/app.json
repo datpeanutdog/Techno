@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PASABUY",
+    "name": "Pasabuy",
     "slug": "pasabuy-campus",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,7 +28,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "PASABUY uses selected photos for profile pictures, listing photos, and support reports.",
+          "photosPermission": "Pasabuy uses selected photos for profile pictures, listing photos, and support reports.",
           "cameraPermission": false,
           "microphonePermission": false
         }

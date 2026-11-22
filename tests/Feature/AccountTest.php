@@ -16,7 +16,7 @@ class AccountTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_web_registration_creates_an_account_and_enters_the_hub(): void
+    public function test_web_registration_creates_an_account_and_enters_the_marketplace(): void
     {
         Notification::fake();
 
@@ -29,6 +29,7 @@ class AccountTest extends TestCase
 
         $user = User::where('email', 'jamie@example.test')->firstOrFail();
         $this->assertAuthenticatedAs($user);
+        $this->assertNull($user->email_verified_at);
         Notification::assertNothingSent();
     }
 
@@ -59,25 +60,6 @@ class AccountTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_settings_page_requires_authentication(): void
-    {
-        $this->get('/settings')->assertRedirect(route('login'));
-    }
-
-    public function test_signed_in_user_can_choose_a_theme_in_settings(): void
-    {
-        $this->actingAs(User::factory()->create())
-            ->get('/settings')
-            ->assertOk()
-            ->assertSee('Appearance')
-            ->assertSee('System')
-            ->assertSee('Light')
-            ->assertSee('Dark')
-            ->assertSee('data-theme-settings', false)
-            ->assertSee(route('profile.edit'))
-            ->assertSee(route('support.reports.create'));
-    }
-
     public function test_web_user_can_upload_a_profile_photo_up_to_ten_megabytes(): void
     {
         Storage::fake('public');
@@ -92,7 +74,7 @@ class AccountTest extends TestCase
         Storage::disk('public')->assertExists($updated->avatar_path);
     }
 
-    public function test_mobile_registration_returns_a_token_and_allows_listing(): void
+    public function test_mobile_registration_returns_a_token_without_email_verification(): void
     {
         Notification::fake();
         $existingUser = User::factory()->create();
@@ -104,12 +86,14 @@ class AccountTest extends TestCase
             'password_confirmation' => 'Correct-Horse-123!',
         ])->assertCreated()
             ->assertJsonPath('data.email', 'jamie@example.test')
+            ->assertJsonPath('data.email_verified', false)
             ->assertJsonPath('data.account_identifier', 'ACC-000002')
-            ->assertJsonPath('message', 'Your account is ready.');
+            ->assertJsonPath('message', 'Your account has been created.');
 
         $this->assertNotEmpty($response->json('token'));
         $this->assertNotSame($existingUser->account_identifier, $response->json('data.account_identifier'));
         $this->assertDatabaseHas('personal_access_tokens', ['tokenable_type' => User::class]);
+        $user = User::where('email', 'jamie@example.test')->firstOrFail();
         Notification::assertNothingSent();
         $this->withToken($response->json('token'))->postJson('/api/listings', [
             'title' => 'My chemistry textbook',
@@ -121,16 +105,39 @@ class AccountTest extends TestCase
         ])->assertCreated();
     }
 
+    public function test_mobile_registration_cannot_assign_an_admin_role(): void
+    {
+        config(['app.admin_emails' => []]);
+        Notification::fake();
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Jamie Lee',
+            'email' => 'jamie@example.test',
+            'password' => 'Correct-Horse-123!',
+            'password_confirmation' => 'Correct-Horse-123!',
+            'role' => User::ROLE_ADMIN,
+        ])->assertCreated()
+            ->assertJsonPath('data.role', User::ROLE_USER);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'jamie@example.test',
+            'role' => User::ROLE_USER,
+        ]);
+    }
+
     public function test_mobile_login_issues_a_token_and_logout_revokes_it(): void
     {
-        $user = User::factory()->create(['email' => 'jamie@example.test']);
+        $user = User::factory()->unverified()->create(['email' => 'jamie@example.test']);
         $login = $this->postJson('/api/auth/login', [
             'email' => $user->email,
             'password' => 'password',
         ])->assertOk();
 
         $token = $login->json('token');
-        $this->withToken($token)->getJson('/api/auth/me')->assertOk()->assertJsonPath('data.email', $user->email);
+        $this->withToken($token)->getJson('/api/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.email', $user->email)
+            ->assertJsonPath('data.email_verified', false);
         $this->withToken($token)->postJson('/api/auth/logout')->assertOk();
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }

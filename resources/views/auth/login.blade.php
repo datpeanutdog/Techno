@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Log in — PASABUY')
+@section('title', 'Log in — Pasabuy')
 
 @section('content')
     <section class="auth-shell">
@@ -17,7 +17,7 @@
             <label class="remember-label"><input type="checkbox" name="remember"> Keep me signed in</label>
             <button class="button button-navy form-submit" type="submit">Log in <span aria-hidden="true">→</span></button>
             <p class="auth-footnote"><a href="{{ route('password.request') }}">Forgot your password?</a></p>
-            <p class="auth-footnote">New to PASABUY? <a href="{{ route('register') }}">Create an account</a></p>
+            <p class="auth-footnote">New to Pasabuy? <a href="{{ route('register') }}">Create an account</a></p>
         </form>
     </section>
 @endsection

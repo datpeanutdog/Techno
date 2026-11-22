@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $listing->title.' — PASABUY')
+@section('title', $listing->title.' — Pasabuy')
 
 @section('content')
     <div class="detail-shell">
@@ -21,7 +21,12 @@
                 </div>
                 <h1>{{ $listing->title }}</h1>
                 <p class="detail-price">₱{{ number_format((float) $listing->price) }}@if ($listing->type === 'rent') <span>/ {{ $listing->rent_period }}</span>@endif</p>
-                <div class="detail-meta"><span>⌖</span> {{ $listing->location }} <span class="meta-dot">·</span> Listed {{ $listing->created_at->diffForHumans() }}</div>
+                <div class="detail-meta">
+                    <span>⌖</span>
+                    {{ $listing->location }}
+                    <span class="meta-dot">·</span>
+                    <time datetime="{{ $listing->created_at->toIso8601String() }}" title="{{ $listing->created_at->format('M j, Y \a\t g:i A') }}">Listed {{ $listing->created_at->diffForHumans() }}</time>
+                </div>
                 <hr>
                 <h2>About this campus find</h2>
                 <p class="detail-description">{{ $listing->description }}</p>
@@ -29,7 +34,7 @@
                     <span class="seller-avatar">@if ($listing->user?->avatar_url)<img src="{{ $listing->user->avatar_url }}" alt="">@else{{ $listing->seller_initials }}@endif</span>
                     <span class="seller-info">
                         @if ($listing->user)<a href="{{ route('sellers.show', $listing->user) }}"><strong>{{ $listing->user->name }}</strong></a>@else<strong>{{ $listing->seller_name }}</strong>@endif
-                        <span>{{ $listing->user?->campus ?? 'On PASABUY' }}
+                        <span>{{ $listing->user?->campus ?? 'On Pasabuy' }}
                             <span class="seller-rating">
                                 @if ($listing->user?->received_reviews_count)
                                     <span aria-hidden="true">★</span> {{ number_format((float) $listing->user->received_reviews_avg_rating, 1) }} · {{ $listing->user->received_reviews_count }} {{ \Illuminate\Support\Str::plural('review', $listing->user->received_reviews_count) }}

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Your messages — PASABUY')
+@section('title', 'Your messages — Pasabuy')
 
 @section('content')
     <section class="messages-shell">

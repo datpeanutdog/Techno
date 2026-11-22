@@ -81,7 +81,7 @@ export default function SellScreen() {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Photo access needed', 'Allow PASABUY to access your photos to add a listing photo.');
+        Alert.alert('Photo access needed', 'Allow Pasabuy to access your photos to add a listing photo.');
         return;
       }
 

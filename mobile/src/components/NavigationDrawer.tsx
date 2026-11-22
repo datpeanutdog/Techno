@@ -266,7 +266,7 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
                 <Text style={drawerStyles.profileArrow}>›</Text>
               </Pressable>
 
-              <Text style={drawerStyles.sectionLabel}>YOUR PASABUY</Text>
+              <Text style={drawerStyles.sectionLabel}>Your Pasabuy</Text>
               <DrawerLink icon="⌕" label="Browse marketplace" onPress={() => navigate('/', 'sale')} />
               <DrawerLink icon="↗" label="Browse rentals" onPress={() => navigate('/', 'rent')} />
               <DrawerLink icon="♡" label="Saved finds" onPress={() => navigate('/', 'saved')} />

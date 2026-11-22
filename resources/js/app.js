@@ -1,52 +1,32 @@
-const favoriteKey = `pasabuy:favorites:${document.body.dataset.accountId || 'guest'}`;
-const toast = document.querySelector('#toast');
 const themePreferenceKey = 'pasabuy:theme';
-let themePreference = 'system';
+const toast = document.querySelector('#toast');
 
-try {
-    const savedThemePreference = window.localStorage.getItem(themePreferenceKey);
-    if (['system', 'light', 'dark'].includes(savedThemePreference)) {
-        themePreference = savedThemePreference;
+const themeSettings = document.querySelector('[data-theme-settings]');
+if (themeSettings) {
+    const themeStatus = themeSettings.querySelector('[data-theme-status]');
+    const selectedTheme = themeSettings.querySelector(`input[name="theme"][value="${document.documentElement.dataset.theme}"]`);
+
+    if (selectedTheme instanceof HTMLInputElement) {
+        selectedTheme.checked = true;
     }
-} catch (error) {
-    console.error('Unable to read the saved theme preference.', error);
-}
 
-const applyThemePreference = (preference) => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.dataset.theme = preference === 'dark' || (preference === 'system' && prefersDark)
-        ? 'dark'
-        : 'light';
-};
+    themeSettings.addEventListener('change', (event) => {
+        const themeInput = event.target;
 
-applyThemePreference(themePreference);
+        if (!(themeInput instanceof HTMLInputElement) || themeInput.name !== 'theme') return;
+        if (themeInput.value !== 'light' && themeInput.value !== 'dark') return;
 
-const themeOptions = document.querySelectorAll('[data-theme-option]');
-const themeStatus = document.querySelector('[data-theme-status]');
-
-themeOptions.forEach((option) => {
-    option.checked = option.value === themePreference;
-    option.addEventListener('change', () => {
-        if (!option.checked) return;
-
-        themePreference = option.value;
-        applyThemePreference(themePreference);
+        document.documentElement.dataset.theme = themeInput.value;
 
         try {
-            window.localStorage.setItem(themePreferenceKey, themePreference);
-            themeStatus.textContent = 'Your theme preference is saved on this browser.';
+            window.localStorage.setItem(themePreferenceKey, themeInput.value);
+            themeStatus.textContent = '';
         } catch (error) {
             console.error('Unable to save the theme preference.', error);
-            themeStatus.textContent = 'Your theme is active, but this browser could not save the preference.';
+            themeStatus.textContent = 'Your theme changed, but this browser could not save your preference.';
         }
     });
-});
-
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    if (themePreference === 'system') {
-        applyThemePreference(themePreference);
-    }
-});
+}
 
 const supportReportForm = document.querySelector('[data-support-report-form]');
 if (supportReportForm) {
@@ -97,9 +77,11 @@ if (liveThread) {
     const pagination = liveThread.querySelector('.pagination-wrap');
     const messageIds = Array.from(liveThread.querySelectorAll('[data-message-id]'))
         .map((message) => Number(message.dataset.messageId));
-    let lastMessageId = Math.max(0, ...messageIds);
+    const latestMessageId = Number(liveThread.dataset.lastMessageId);
+    let lastMessageId = Math.max(0, Number.isSafeInteger(latestMessageId) ? latestMessageId : 0, ...messageIds);
     let isCheckingForMessages = false;
     let isSendingMessage = false;
+    let pollTimeout;
 
     liveThread.scrollTop = liveThread.scrollHeight;
 
@@ -218,23 +200,35 @@ if (liveThread) {
     });
 
     pollForMessages();
-    window.setInterval(pollForMessages, 2000);
+    const schedulePoll = () => {
+        window.clearTimeout(pollTimeout);
+        pollTimeout = window.setTimeout(async () => {
+            await pollForMessages();
+            schedulePoll();
+        }, 2000);
+    };
+
+    schedulePoll();
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            pollForMessages();
+            schedulePoll();
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        pollForMessages();
+        schedulePoll();
+    });
 }
 
 const savedFavorites = () => {
-    try {
-        const stored = JSON.parse(window.localStorage.getItem(favoriteKey) || '[]');
-
-        if (!Array.isArray(stored)) {
-            throw new TypeError('Saved listings must be stored as an array.');
-        }
-
-        return new Set(stored.map(String).filter((id) => /^[1-9]\d*$/.test(id)));
-    } catch (error) {
-        console.error('Unable to read saved listings from local storage.', error);
-
-        return new Set();
-    }
+    return new Set(
+        Array.from(document.querySelectorAll('[data-favorite][aria-pressed="true"]'))
+            .map((button) => button.dataset.favorite)
+            .filter((id) => /^[1-9]\d*$/.test(id ?? '')),
+    );
 };
 
 const updateFavoriteButtons = () => {
@@ -264,56 +258,54 @@ updateFavoriteButtons();
 const savedLink = document.querySelector('[data-saved-link]');
 savedLink?.addEventListener('click', (event) => {
     event.preventDefault();
-
-    const url = new URL(savedLink.href);
-    url.searchParams.set('favorites', [...savedFavorites()].sort((first, second) => Number(first) - Number(second)).join(','));
-    window.location.assign(url);
+    window.location.assign(savedLink.href);
 });
 
 const savedView = document.querySelector('[data-saved-view]');
 if (savedView) {
-    const url = new URL(window.location.href);
-    const favorites = [...savedFavorites()].sort((first, second) => Number(first) - Number(second)).join(',');
-    const requestedFavorites = url.searchParams.get('favorites') || '';
-
-    if (requestedFavorites !== favorites) {
-        url.searchParams.set('favorites', favorites);
-        window.location.replace(url);
-    }
 }
 
 document.querySelectorAll('[data-favorite]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
         const favorites = savedFavorites();
         const wasSaved = favorites.has(button.dataset.favorite);
+        const url = wasSaved ? button.dataset.unsaveUrl : button.dataset.saveUrl;
+        const method = wasSaved ? 'DELETE' : 'POST';
 
-        if (wasSaved) {
-            favorites.delete(button.dataset.favorite);
-        } else {
-            favorites.add(button.dataset.favorite);
+        button.disabled = true;
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Saving the listing failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+            button.setAttribute('aria-pressed', payload.saved ? 'true' : 'false');
+            button.setAttribute('aria-label', `${payload.saved ? 'Remove' : 'Save'} ${button.getAttribute('aria-label').replace(/^(Save|Remove) /, '')}`);
+        } catch (error) {
+            console.error(error);
+            showToast('Your saved listing could not be updated. Please try again.');
+            button.disabled = false;
+            return;
         }
 
-        window.localStorage.setItem(favoriteKey, JSON.stringify([...favorites]));
+        button.disabled = false;
         updateFavoriteButtons();
 
         if (wasSaved && savedView) {
             button.closest('.listing-card')?.remove();
-
-            const url = new URL(window.location.href);
-            url.searchParams.set('favorites', [...favorites].sort((first, second) => Number(first) - Number(second)).join(','));
-            window.history.replaceState(null, '', url);
-
-            document.querySelectorAll('.pagination-wrap a').forEach((link) => {
-                const pageUrl = new URL(link.href);
-                pageUrl.searchParams.set('favorites', [...favorites].sort((first, second) => Number(first) - Number(second)).join(','));
-                link.href = pageUrl;
-            });
-
-            if (!document.querySelector('.listing-grid .listing-card')) {
-                url.searchParams.delete('page');
-                window.location.assign(url);
-                return;
-            }
+            window.location.reload();
+            return;
         }
 
         showToast(wasSaved ? 'Removed from your saved finds.' : 'Saved for later. Good choice!');
@@ -435,4 +427,57 @@ if (sidebar && sidebarToggle && sidebarLayout) {
 
         updateSidebarControls();
     });
+}
+
+const emailVerificationCard = document.querySelector('[data-email-verification]');
+
+if (emailVerificationCard) {
+    const pendingVerification = emailVerificationCard.querySelector('[data-verification-pending]');
+    const completedVerification = emailVerificationCard.querySelector('[data-verification-complete]');
+    const verificationMessage = emailVerificationCard.querySelector('[data-verification-message]');
+    const initialVerificationMessage = verificationMessage.textContent;
+    let isCheckingVerification = false;
+
+    const checkVerificationStatus = async () => {
+        if (document.hidden || pendingVerification.hidden || isCheckingVerification) return;
+
+        isCheckingVerification = true;
+
+        try {
+            const response = await fetch(emailVerificationCard.dataset.statusUrl, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Verification status request failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+
+            if (typeof payload.verified !== 'boolean') {
+                throw new Error('Verification status response did not contain a verified state.');
+            }
+
+            if (payload.verified) {
+                pendingVerification.hidden = true;
+                completedVerification.hidden = false;
+            } else {
+                verificationMessage.textContent = initialVerificationMessage;
+            }
+        } catch (error) {
+            verificationMessage.textContent = 'We could not check verification status. Refresh this page after opening the email link.';
+            console.error('Unable to check email verification status.', error);
+        } finally {
+            isCheckingVerification = false;
+        }
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            checkVerificationStatus();
+        }
+    });
+
+    window.addEventListener('focus', checkVerificationStatus);
 }

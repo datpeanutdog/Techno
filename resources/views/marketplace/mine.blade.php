@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'My listings — PASABUY')
+@section('title', 'My listings — Pasabuy')
 
 @section('content')
     <section class="my-listings-shell">
@@ -13,6 +13,7 @@
                     <span class="listing-category">{{ $listing->category }} · {{ $listing->type === 'rent' ? 'For rent' : 'For sale' }}</span>
                     <h2><a href="{{ route('listings.show', $listing) }}">{{ $listing->title }}</a></h2>
                     <p>₱{{ number_format((float) $listing->price, 2) }} · {{ $listing->location }}</p>
+                    <time class="listing-added" datetime="{{ $listing->created_at->toIso8601String() }}" title="{{ $listing->created_at->format('M j, Y \a\t g:i A') }}">Listed {{ $listing->created_at->diffForHumans() }}</time>
                 </div>
                 <div class="my-listing-actions">
                     <a class="button button-navy" href="{{ route('my-listings.edit', $listing) }}">Edit</a>

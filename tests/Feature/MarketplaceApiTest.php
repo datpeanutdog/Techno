@@ -166,9 +166,17 @@ class MarketplaceApiTest extends TestCase
             ->assertCreated();
     }
 
-    public function test_mobile_email_verification_endpoint_is_not_enabled(): void
+    public function test_unverified_mobile_users_can_browse_and_use_protected_features(): void
     {
-        $this->postJson('/api/auth/verification-notification')->assertNotFound();
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/listings?mode=sale')
+            ->assertOk();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/conversations')
+            ->assertOk();
     }
 
     public function test_mobile_users_can_only_manage_their_own_listings(): void

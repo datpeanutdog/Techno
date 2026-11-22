@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'PASABUY — made for USTP student life')
+@section('title', 'Pasabuy — made for USTP student life')
 
 @section('content')
     <section class="landing-hero" aria-labelledby="landing-title">
@@ -46,7 +46,7 @@
                         <span class="landing-support-arrow" aria-hidden="true">→</span>
                     </a>
                     <p class="auth-footnote"><a href="{{ route('password.request') }}">Forgot your password?</a></p>
-                    <p class="auth-footnote">New to PASABUY? <a href="{{ route('marketplace.index') }}">Create an account</a></p>
+                    <p class="auth-footnote">New to Pasabuy? <a href="{{ route('marketplace.index') }}">Create an account</a></p>
                 </form>
             @else
                 <form class="landing-signup-card" id="account-form" method="POST" action="{{ route('register') }}" aria-labelledby="landing-signup-title">

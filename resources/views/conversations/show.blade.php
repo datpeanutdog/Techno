@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Chat about '.$conversation->listing->title.' — PASABUY')
+@section('title', 'Chat about '.$conversation->listing->title.' — Pasabuy')
 
 @section('content')
     <section class="conversation-shell">
