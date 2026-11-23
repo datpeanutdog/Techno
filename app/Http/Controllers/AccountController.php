@@ -34,17 +34,6 @@ class AccountController extends Controller
         return redirect()->route('marketplace.index');
     }
 
-    public function sendVerificationNotification(Request $request): RedirectResponse
-    {
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('marketplace.index'));
-        }
-
-        $request->user()->sendEmailVerificationNotification();
-
-        return back()->with('status', 'A fresh verification link has been sent to your email address.');
-    }
-
     public function loginForm(): View
     {
         return view('auth.login');

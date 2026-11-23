@@ -2,11 +2,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  AppState,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -67,7 +66,6 @@ export default function AccountScreen() {
   const bio = useRef('');
   const campus = useRef('');
   const avatarUrl = useRef('');
-  const previousVerificationState = useRef<boolean | null>(null);
 
   const resumeDestination = useCallback((): boolean => {
     if (returnTo === 'sell') {
@@ -109,7 +107,6 @@ export default function AccountScreen() {
       if (!await getAuthToken()) {
         setUser(null);
         setListings([]);
-        previousVerificationState.current = null;
         return null;
       }
 
@@ -121,20 +118,6 @@ export default function AccountScreen() {
       campus.current = profile.data.campus ?? '';
       avatarUrl.current = getExternalAvatarUrl(profile.data.avatar_url);
 
-      const wasVerified = previousVerificationState.current;
-      previousVerificationState.current = profile.data.email_verified;
-      if (!profile.data.email_verified) {
-        setListings([]);
-        return profile.data;
-      }
-
-      if (wasVerified === false) {
-        setMessage('Your email address has been verified.');
-      }
-      if ((wasVerified === false || wasVerified === null) && resumeDestination()) {
-        return profile.data;
-      }
-
       const mine = await requestJson<Listing[]>('/my-listings');
       setListings(mine.data);
       setError('');
@@ -145,62 +128,16 @@ export default function AccountScreen() {
         await clearAuthToken();
         setUser(null);
         setListings([]);
-        previousVerificationState.current = null;
         return null;
       }
       setError(detail);
       return null;
     }
-  }, [resumeDestination]);
+  }, []);
 
   useFocusEffect(useCallback(() => {
     void loadAccount();
   }, [loadAccount]));
-
-  const needsEmailVerification = user?.email_verified === false;
-
-  useEffect(() => {
-    if (!needsEmailVerification) {
-      return undefined;
-    }
-
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        void loadAccount();
-      }
-    });
-
-    return () => subscription.remove();
-  }, [loadAccount, needsEmailVerification]);
-
-  const resendVerificationEmail = async () => {
-    setBusy(true);
-    setError('');
-    setMessage('');
-    try {
-      const result = await requestJson<never>('/auth/verification-notification', {
-        method: 'POST',
-      });
-      setMessage(result.message ?? 'A verification link has been sent to your email address.');
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'The verification email could not be sent.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const checkVerificationStatus = async () => {
-    setBusy(true);
-    setError('');
-    try {
-      const profile = await loadAccount();
-      if (profile && !profile.email_verified) {
-        setMessage('Your email is not verified yet. Open the link in your email, then check again.');
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const submitAccountForm = async () => {
     setBusy(true);
@@ -237,12 +174,6 @@ export default function AccountScreen() {
       await saveAuthToken(result.token);
       setUser(result.data);
       setNameFromProfile(result.data);
-      previousVerificationState.current = result.data.email_verified;
-      if (!result.data.email_verified) {
-        setListings([]);
-        setMessage('Check your email to verify your account. You can browse while you wait, but messaging and listing features need verification.');
-        return;
-      }
 
       setMessage(mode === 'register' ? result.message ?? 'Your account is ready.' : 'You are signed in.');
       await loadAccount();
@@ -341,7 +272,6 @@ export default function AccountScreen() {
       await clearAuthToken();
       setUser(null);
       setListings([]);
-      previousVerificationState.current = null;
       setBusy(false);
     }
   };
@@ -405,7 +335,7 @@ export default function AccountScreen() {
           <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} keyboardShouldPersistTaps="handled">
             {error ? <Text style={styles.formError}>{error}</Text> : null}
             {message ? <Text style={styles.formSubheading}>{message}</Text> : null}
-            {user ? (user.email_verified ? (
+            {user ? (
               <>
                 <View style={styles.formCard}>
                   <Text style={styles.formHeading}>Your student profile</Text>
@@ -471,37 +401,6 @@ export default function AccountScreen() {
                 </View>
               </>
             ) : (
-              <View style={styles.formCard}>
-                <Text style={styles.formHeading}>Verify your email</Text>
-                <Text style={styles.formSubheading}>
-                  We sent a verification link to {user.email}. Open the link in your email, then return to Pasabuy.
-                </Text>
-                <Text style={[styles.formSubheading, { marginTop: 10 }]}>
-                  You can browse while you wait. Messaging, listing, and other account features unlock after verification.
-                </Text>
-                <Pressable
-                  disabled={busy}
-                  onPress={() => void resendVerificationEmail()}
-                  style={[styles.primaryButton, { marginTop: 16 }, busy && styles.disabledButton]}
-                >
-                  {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Resend verification email</Text>}
-                </Pressable>
-                <Pressable
-                  disabled={busy}
-                  onPress={() => void checkVerificationStatus()}
-                  style={[styles.primaryButton, { marginTop: 10, backgroundColor: COLORS.paleNeutral }, busy && styles.disabledButton]}
-                >
-                  {busy ? <ActivityIndicator color={COLORS.navy} /> : <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>I’ve verified my email</Text>}
-                </Pressable>
-                <Pressable
-                  disabled={busy}
-                  onPress={() => void logout()}
-                  style={[styles.primaryButton, { marginTop: 10, backgroundColor: COLORS.paleNeutral }, busy && styles.disabledButton]}
-                >
-                  <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>Log out</Text>
-                </Pressable>
-              </View>
-            )) : (
               <View style={styles.formCard}>
                 <Text style={styles.formHeading}>{mode === 'register' ? 'Create your account' : mode === 'forgot' ? 'Reset your password' : 'Log in to Pasabuy'}</Text>
                 <Text style={styles.formSubheading}>Your account lets you post and manage school-related items.</Text>

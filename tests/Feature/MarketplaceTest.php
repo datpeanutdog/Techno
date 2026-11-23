@@ -424,7 +424,8 @@ class MarketplaceTest extends TestCase
         $user = User::factory()->unverified()->create();
 
         $this->actingAs($user)->get('/')->assertOk();
-        $this->actingAs($user)->get(route('listings.create'))->assertOk();
+        $this->actingAs($user)->get(route('listings.create'))
+            ->assertOk();
         $this->actingAs($user)->post(route('listings.store'), [
             'title' => 'My lab coat',
             'description' => 'Clean lab coat for science class.',
@@ -435,6 +436,10 @@ class MarketplaceTest extends TestCase
         ])->assertRedirect();
 
         $this->assertDatabaseCount('listings', 1);
+        $this->assertDatabaseHas('listings', [
+            'title' => 'My lab coat',
+            'user_id' => $user->id,
+        ]);
     }
 
     public function test_users_cannot_edit_or_remove_other_users_listings(): void

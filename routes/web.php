@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\PresenceController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SupportReportController;
 use App\Http\Controllers\SuspensionAppealController;
@@ -44,6 +45,10 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::middleware(['auth', 'account.active'])->group(function (): void {
+    Route::post('/presence/heartbeat', [PresenceController::class, 'heartbeat'])
+        ->middleware('throttle:60,1')
+        ->name('presence.heartbeat');
+
     Route::prefix('/admin/users')
         ->name('admin.users.')
         ->middleware('can:manage-users')
@@ -73,6 +78,9 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
     Route::get('/messages/{conversation}/updates', [MessageController::class, 'updates'])
         ->middleware('throttle:60,1')
         ->name('conversations.messages.updates');
+    Route::get('/messages/{conversation}/presence', [MessageController::class, 'presence'])
+        ->middleware('throttle:60,1')
+        ->name('conversations.presence');
     Route::get('/listings/{listing:slug}/message', [MarketplaceController::class, 'messageSeller'])
         ->name('listings.messages.create');
     Route::post('/listings/{listing:slug}/messages', [ConversationController::class, 'store'])

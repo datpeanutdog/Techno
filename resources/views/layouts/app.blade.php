@@ -18,9 +18,15 @@
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-@php($hasSidebar = auth()->check() && ! request()->routeIs('login', 'register', 'password.*', 'verification.*', 'account.suspension.*'))
+@php($hasSidebar = auth()->check() && ! request()->routeIs('login', 'register', 'password.*', 'account.suspension.*'))
 @php($isLandingPage = ! auth()->check() && request()->routeIs('marketplace.index'))
-<body>
+<body
+    @auth
+        @if (! auth()->user()->isSuspended())
+            data-presence-heartbeat-url="{{ route('presence.heartbeat') }}"
+        @endif
+    @endauth
+>
     <div class="site-layout {{ $hasSidebar ? 'has-sidebar' : '' }} {{ $isLandingPage ? 'landing-layout' : '' }}">
         @if ($hasSidebar)
             <aside class="site-sidebar" id="site-sidebar" aria-label="Site navigation">

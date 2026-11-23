@@ -16,7 +16,7 @@ class AccountTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_web_registration_creates_an_account_and_enters_the_marketplace(): void
+    public function test_web_registration_creates_an_account_without_email_verification(): void
     {
         Notification::fake();
 
@@ -31,6 +31,13 @@ class AccountTest extends TestCase
         $this->assertAuthenticatedAs($user);
         $this->assertNull($user->email_verified_at);
         Notification::assertNothingSent();
+    }
+
+    public function test_email_verification_endpoints_are_removed(): void
+    {
+        $this->get('/email/verify')->assertNotFound();
+        $this->post('/email/verification-notification')->assertNotFound();
+        $this->postJson('/api/auth/verification-notification')->assertNotFound();
     }
 
     public function test_web_login_profile_customization_and_logout_work(): void
@@ -74,7 +81,7 @@ class AccountTest extends TestCase
         Storage::disk('public')->assertExists($updated->avatar_path);
     }
 
-    public function test_mobile_registration_returns_a_token_without_email_verification(): void
+    public function test_mobile_registration_returns_a_token_without_email_verification_and_allows_account_features(): void
     {
         Notification::fake();
         $existingUser = User::factory()->create();
@@ -86,9 +93,8 @@ class AccountTest extends TestCase
             'password_confirmation' => 'Correct-Horse-123!',
         ])->assertCreated()
             ->assertJsonPath('data.email', 'jamie@example.test')
-            ->assertJsonPath('data.email_verified', false)
             ->assertJsonPath('data.account_identifier', 'ACC-000002')
-            ->assertJsonPath('message', 'Your account has been created.');
+            ->assertJsonPath('message', 'Your account is ready.');
 
         $this->assertNotEmpty($response->json('token'));
         $this->assertNotSame($existingUser->account_identifier, $response->json('data.account_identifier'));
@@ -103,6 +109,10 @@ class AccountTest extends TestCase
             'category' => 'Books & Notes',
             'location' => 'Main campus',
         ])->assertCreated();
+        $this->assertDatabaseHas('listings', [
+            'title' => 'My chemistry textbook',
+            'user_id' => $user->id,
+        ]);
     }
 
     public function test_mobile_registration_cannot_assign_an_admin_role(): void
@@ -136,8 +146,7 @@ class AccountTest extends TestCase
         $token = $login->json('token');
         $this->withToken($token)->getJson('/api/auth/me')
             ->assertOk()
-            ->assertJsonPath('data.email', $user->email)
-            ->assertJsonPath('data.email_verified', false);
+            ->assertJsonPath('data.email', $user->email);
         $this->withToken($token)->postJson('/api/auth/logout')->assertOk();
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }

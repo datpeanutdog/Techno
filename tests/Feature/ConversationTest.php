@@ -132,7 +132,7 @@ class ConversationTest extends TestCase
         Notification::assertNotSentTo($buyer, NewConversationNotification::class);
     }
 
-    public function test_new_conversation_does_not_email_an_unverified_seller(): void
+    public function test_new_conversation_emails_an_unverified_seller(): void
     {
         Notification::fake();
 
@@ -142,7 +142,7 @@ class ConversationTest extends TestCase
 
         $this->startConversation($buyer, $listing);
 
-        Notification::assertNotSentTo($seller, NewConversationNotification::class);
+        Notification::assertSentTo($seller, NewConversationNotification::class);
     }
 
     public function test_inbox_shows_only_a_participants_conversations_and_unread_count(): void
@@ -208,6 +208,73 @@ class ConversationTest extends TestCase
         $stranger = User::factory()->create();
         $this->actingAs($stranger)
             ->getJson(route('conversations.messages.updates', [$conversation, 'after' => $firstMessage->id]))
+            ->assertNotFound();
+    }
+
+    public function test_conversation_shows_seen_receipt_and_participant_avatars(): void
+    {
+        $seller = User::factory()->create(['avatar_path' => 'https://images.example.test/seller.png']);
+        $buyer = User::factory()->create(['avatar_path' => 'https://images.example.test/buyer.png']);
+        $listing = $this->createListing($seller);
+        $conversation = $this->startConversation($buyer, $listing);
+        $message = $conversation->messages()->sole();
+
+        $this->actingAs($seller)
+            ->get(route('conversations.show', $conversation))
+            ->assertOk();
+
+        $this->actingAs($buyer)
+            ->get(route('conversations.show', $conversation))
+            ->assertOk()
+            ->assertSee('Seen')
+            ->assertSee('src="https://images.example.test/buyer.png"', false)
+            ->assertSee('src="https://images.example.test/seller.png"', false);
+
+        $this->actingAs($buyer)
+            ->getJson(route('conversations.messages.updates', [$conversation, 'after' => $message->id]))
+            ->assertOk()
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('last_seen_message_id', $message->id);
+
+        $this->assertNotNull($message->fresh()->read_at);
+    }
+
+    public function test_conversation_presence_moves_from_online_to_away_and_offline(): void
+    {
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create();
+        $listing = $this->createListing($seller);
+        $conversation = $this->startConversation($buyer, $listing);
+
+        $this->travelTo(now()->startOfMinute());
+
+        $this->actingAs($seller)
+            ->postJson(route('presence.heartbeat'), ['active' => true])
+            ->assertOk()
+            ->assertJsonPath('data.presence_status', 'online');
+
+        $this->travel(16)->minutes();
+
+        $this->actingAs($seller)
+            ->postJson(route('presence.heartbeat'), ['active' => false])
+            ->assertOk()
+            ->assertJsonPath('data.presence_status', 'away');
+        $this->assertDatabaseHas('users', ['id' => $seller->id, 'presence_active' => false]);
+        $this->actingAs($buyer)
+            ->getJson(route('conversations.presence', $conversation))
+            ->assertOk()
+            ->assertJsonPath('data.presence_status', 'away');
+
+        $this->travel(3)->minutes();
+
+        $this->actingAs($buyer)
+            ->getJson(route('conversations.presence', $conversation))
+            ->assertOk()
+            ->assertJsonPath('data.presence_status', 'offline');
+
+        $stranger = User::factory()->create();
+        $this->actingAs($stranger)
+            ->getJson(route('conversations.presence', $conversation))
             ->assertNotFound();
     }
 

@@ -1,7 +1,83 @@
 const themePreferenceKey = 'pasabuy:theme';
 const toast = document.querySelector('#toast');
 
+const presenceHeartbeatUrl = document.body.dataset.presenceHeartbeatUrl;
+
+if (presenceHeartbeatUrl) {
+    let lastActivityAt = Date.now();
+    let isSendingHeartbeat = false;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    const recordActivity = () => {
+        lastActivityAt = Date.now();
+    };
+
+    const sendPresenceHeartbeat = async () => {
+        if (document.hidden || isSendingHeartbeat) return;
+
+        isSendingHeartbeat = true;
+
+        try {
+            const response = await fetch(presenceHeartbeatUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    active: Date.now() - lastActivityAt < 15 * 60 * 1000,
+                }),
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Presence heartbeat failed with status ${response.status}.`);
+            }
+        } catch (error) {
+            console.error('Unable to update messaging presence.', error);
+        } finally {
+            isSendingHeartbeat = false;
+        }
+    };
+
+    ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach((eventName) => {
+        document.addEventListener(eventName, recordActivity, { passive: true });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            recordActivity();
+            sendPresenceHeartbeat();
+        }
+    });
+
+    sendPresenceHeartbeat();
+    window.setInterval(sendPresenceHeartbeat, 60 * 1000);
+}
+
 const themeSettings = document.querySelector('[data-theme-settings]');
+const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)');
+let themePreference = 'system';
+
+try {
+    const storedTheme = window.localStorage.getItem(themePreferenceKey);
+    if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') {
+        themePreference = storedTheme;
+    }
+} catch (error) {
+    console.error('Unable to read the saved theme preference.', error);
+}
+const applyTheme = () => {
+    document.documentElement.dataset.theme = themePreference === 'dark'
+        || (themePreference === 'system' && prefersDarkTheme.matches)
+        ? 'dark'
+        : 'light';
+};
+
+applyTheme();
+prefersDarkTheme.addEventListener('change', applyTheme);
+
 if (themeSettings) {
     const themeStatus = themeSettings.querySelector('[data-theme-status]');
     const selectedTheme = themeSettings.querySelector(`input[name="theme"][value="${document.documentElement.dataset.theme}"]`);
@@ -79,23 +155,71 @@ if (liveThread) {
         .map((message) => Number(message.dataset.messageId));
     const latestMessageId = Number(liveThread.dataset.lastMessageId);
     let lastMessageId = Math.max(0, Number.isSafeInteger(latestMessageId) ? latestMessageId : 0, ...messageIds);
+    let lastSeenMessageId = Number(liveThread.dataset.lastSeenMessageId);
     let isCheckingForMessages = false;
     let isSendingMessage = false;
     let pollTimeout;
 
     liveThread.scrollTop = liveThread.scrollHeight;
 
+    const createAvatar = (avatarUrl, name, className) => {
+        const avatar = document.createElement('span');
+        avatar.classList.add(className);
+        avatar.setAttribute('aria-hidden', 'true');
+
+        if (avatarUrl) {
+            const image = document.createElement('img');
+            image.src = avatarUrl;
+            image.alt = '';
+            avatar.append(image);
+        } else {
+            const initial = document.createElement('span');
+            initial.textContent = name.trim().charAt(0).toUpperCase() || '?';
+            avatar.append(initial);
+        }
+
+        return avatar;
+    };
+
+    const updateSeenMessage = (messageId) => {
+        liveThread.querySelectorAll('[data-message-seen]').forEach((receipt) => receipt.remove());
+
+        const parsedMessageId = Number(messageId);
+
+        if (!Number.isSafeInteger(parsedMessageId) || parsedMessageId < 1) return;
+
+        const bubble = liveThread.querySelector(`[data-message-id="${parsedMessageId}"]`);
+
+        if (!bubble?.classList.contains('message-own')) return;
+
+        const receipt = document.createElement('span');
+        receipt.classList.add('message-seen');
+        receipt.dataset.messageSeen = '';
+        receipt.append(createAvatar(
+            liveThread.dataset.seenAvatarUrl,
+            liveThread.dataset.seenInitial,
+            'message-seen-avatar',
+        ));
+
+        const label = document.createElement('span');
+        label.textContent = 'Seen';
+        receipt.append(label);
+        bubble.append(receipt);
+    };
+
     const addMessage = (message) => {
         const messageId = Number(message.id);
 
         if (!Number.isSafeInteger(messageId) || messageId <= lastMessageId) return false;
 
+        const isOwnMessage = Number(message.sender_id) === currentUserId;
+        const row = document.createElement('div');
+        row.classList.add('message-row');
+        if (isOwnMessage) row.classList.add('message-row-own');
+
         const bubble = document.createElement('article');
         bubble.classList.add('message-bubble');
-
-        if (Number(message.sender_id) === currentUserId) {
-            bubble.classList.add('message-own');
-        }
+        if (isOwnMessage) bubble.classList.add('message-own');
 
         bubble.dataset.messageId = String(messageId);
 
@@ -111,7 +235,12 @@ if (liveThread) {
         time.textContent = message.display_time;
 
         bubble.append(sender, body, time);
-        liveThread.insertBefore(bubble, pagination);
+        const content = document.createElement('div');
+        content.classList.add('message-content');
+        content.append(bubble);
+        const avatar = createAvatar(message.sender_avatar_url, message.sender_name, 'message-avatar');
+        row.append(...(isOwnMessage ? [content, avatar] : [avatar, content]));
+        liveThread.insertBefore(row, pagination);
         liveThread.querySelector('.empty-state')?.remove();
         lastMessageId = messageId;
 
@@ -134,7 +263,8 @@ if (liveThread) {
                 throw new Error(`Message update request failed with status ${response.status}.`);
             }
 
-            const { data } = await response.json();
+            const payload = await response.json();
+            const { data } = payload;
 
             if (!Array.isArray(data)) {
                 throw new Error('Message update response did not contain a message list.');
@@ -143,6 +273,11 @@ if (liveThread) {
             const wasAtBottom = liveThread.scrollHeight - liveThread.scrollTop - liveThread.clientHeight < 60;
             const previousScrollTop = liveThread.scrollTop;
             const addedMessages = data.reduce((added, message) => addMessage(message) || added, false);
+            lastSeenMessageId = Number.isSafeInteger(Number(payload.last_seen_message_id))
+                ? Number(payload.last_seen_message_id)
+                : 0;
+            liveThread.dataset.lastSeenMessageId = String(lastSeenMessageId);
+            updateSeenMessage(lastSeenMessageId);
 
             if (addedMessages && wasAtBottom) {
                 liveThread.scrollTop = liveThread.scrollHeight;
@@ -221,6 +356,47 @@ if (liveThread) {
         pollForMessages();
         schedulePoll();
     });
+}
+
+const presenceIndicators = Array.from(document.querySelectorAll('[data-presence-url]'));
+
+if (presenceIndicators.length) {
+    const validPresenceStatuses = new Set(['online', 'away', 'offline']);
+
+    const refreshPresence = async (indicator) => {
+        try {
+            const response = await fetch(indicator.dataset.presenceUrl, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Presence status request failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+            const status = payload.data?.presence_status;
+
+            if (!validPresenceStatuses.has(status)) {
+                throw new Error('Presence status response contained an invalid state.');
+            }
+
+            indicator.dataset.presenceStatus = status;
+            indicator.querySelector('[data-presence-label]').textContent =
+                status.charAt(0).toUpperCase() + status.slice(1);
+        } catch (error) {
+            console.error('Unable to refresh messaging presence.', error);
+        }
+    };
+
+    const refreshAllPresence = () => {
+        if (document.hidden) return;
+        presenceIndicators.forEach((indicator) => refreshPresence(indicator));
+    };
+
+    refreshAllPresence();
+    window.setInterval(refreshAllPresence, 30 * 1000);
+    document.addEventListener('visibilitychange', refreshAllPresence);
 }
 
 const savedFavorites = () => {
@@ -427,57 +603,4 @@ if (sidebar && sidebarToggle && sidebarLayout) {
 
         updateSidebarControls();
     });
-}
-
-const emailVerificationCard = document.querySelector('[data-email-verification]');
-
-if (emailVerificationCard) {
-    const pendingVerification = emailVerificationCard.querySelector('[data-verification-pending]');
-    const completedVerification = emailVerificationCard.querySelector('[data-verification-complete]');
-    const verificationMessage = emailVerificationCard.querySelector('[data-verification-message]');
-    const initialVerificationMessage = verificationMessage.textContent;
-    let isCheckingVerification = false;
-
-    const checkVerificationStatus = async () => {
-        if (document.hidden || pendingVerification.hidden || isCheckingVerification) return;
-
-        isCheckingVerification = true;
-
-        try {
-            const response = await fetch(emailVerificationCard.dataset.statusUrl, {
-                headers: { Accept: 'application/json' },
-                credentials: 'same-origin',
-            });
-
-            if (!response.ok) {
-                throw new Error(`Verification status request failed with status ${response.status}.`);
-            }
-
-            const payload = await response.json();
-
-            if (typeof payload.verified !== 'boolean') {
-                throw new Error('Verification status response did not contain a verified state.');
-            }
-
-            if (payload.verified) {
-                pendingVerification.hidden = true;
-                completedVerification.hidden = false;
-            } else {
-                verificationMessage.textContent = initialVerificationMessage;
-            }
-        } catch (error) {
-            verificationMessage.textContent = 'We could not check verification status. Refresh this page after opening the email link.';
-            console.error('Unable to check email verification status.', error);
-        } finally {
-            isCheckingVerification = false;
-        }
-    };
-
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-            checkVerificationStatus();
-        }
-    });
-
-    window.addEventListener('focus', checkVerificationStatus);
 }
