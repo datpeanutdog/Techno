@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\FetchRequestWorkflow;
+use App\Http\Requests\StoreFetchRequestRequest as StoreFetchRequestHttpRequest;
 use App\Models\FetchRequest;
-use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,7 @@ use Illuminate\View\View;
 
 class FetchRequestController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $requests = FetchRequest::query()
             ->with('user:id,name')
@@ -19,8 +20,23 @@ class FetchRequestController extends Controller
             ->latest('id')
             ->limit(30)
             ->get();
+        $acceptedJobs = $request->user()->acceptedFetchRequests()
+            ->with('user:id,name')
+            ->latest('accepted_at')
+            ->limit(10)
+            ->get();
+        $postedRequests = $request->user()->fetchRequests()
+            ->with('acceptedBy:id,name')
+            ->whereIn('status', [
+                FetchRequest::STATUS_ACCEPTED,
+                FetchRequest::STATUS_DELIVERED,
+                FetchRequest::STATUS_COMPLETED,
+            ])
+            ->latest('id')
+            ->limit(10)
+            ->get();
 
-        return view('fetch.index', compact('requests'));
+        return view('fetch.index', compact('requests', 'acceptedJobs', 'postedRequests'));
     }
 
     public function create(): View
@@ -28,57 +44,58 @@ class FetchRequestController extends Controller
         return view('fetch.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreFetchRequestHttpRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'item_name' => ['required', 'string', 'max:90'],
-            'details' => ['required', 'string', 'max:1000'],
-            'budget' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
-            'delivery_location' => ['required', 'string', 'max:100'],
-            'duration_value' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:1440',
-                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
-                    $multipliers = [
-                        'minutes' => 1,
-                        'hours' => 60,
-                        'days' => 1440,
-                    ];
-                    $unit = $request->input('duration_unit');
-
-                    if (! is_string($unit) || ! isset($multipliers[$unit])) {
-                        return;
-                    }
-
-                    $durationInMinutes = (int) $value * $multipliers[$unit];
-
-                    if ($durationInMinutes < 5 || $durationInMinutes > 1440) {
-                        $fail('Choose a duration between 5 minutes and 1 day.');
-                    }
-                },
-            ],
-            'duration_unit' => ['required', 'string', 'in:minutes,hours,days'],
-        ]);
-
-        $durationInMinutes = (int) $validated['duration_value'] * match ($validated['duration_unit']) {
-            'minutes' => 1,
-            'hours' => 60,
-            'days' => 1440,
-        };
+        $validated = $request->validated();
+        $deadlines = $request->deadlineAttributes();
 
         $request->user()->fetchRequests()->create([
             'item_name' => $validated['item_name'],
             'details' => $validated['details'],
             'budget' => $validated['budget'] ?? null,
             'delivery_location' => $validated['delivery_location'],
-            'expires_at' => now()->addMinutes($durationInMinutes),
+            ...$deadlines,
         ]);
 
         return redirect()
             ->route('fetch.index')
             ->with('status', 'Your fetch request is live.');
+    }
+
+    public function accept(
+        Request $request,
+        FetchRequest $fetchRequest,
+        FetchRequestWorkflow $workflow,
+    ): RedirectResponse {
+        $workflow->accept($fetchRequest, $request->user());
+
+        return redirect()
+            ->route('fetch.index')
+            ->with('status', 'You accepted this fetch request.');
+    }
+
+    public function delivered(
+        Request $request,
+        FetchRequest $fetchRequest,
+        FetchRequestWorkflow $workflow,
+    ): RedirectResponse {
+        $workflow->reportDelivery($fetchRequest, $request->user());
+
+        return redirect()
+            ->route('fetch.index')
+            ->with('status', 'Delivery reported. The requester will confirm it.');
+    }
+
+    public function confirm(
+        Request $request,
+        FetchRequest $fetchRequest,
+        FetchRequestWorkflow $workflow,
+    ): RedirectResponse {
+        $workflow->confirmDelivery($fetchRequest, $request->user());
+
+        return redirect()
+            ->route('fetch.index')
+            ->with('status', 'Delivery confirmed.');
     }
 
     public function updates(Request $request): JsonResponse
@@ -102,12 +119,23 @@ class FetchRequestController extends Controller
                 'details' => $fetchRequest->details,
                 'budget' => $fetchRequest->budget,
                 'delivery_location' => $fetchRequest->delivery_location,
+                'created_at' => $fetchRequest->created_at->toIso8601String(),
                 'expires_at' => $fetchRequest->effectiveExpiresAt()->toIso8601String(),
                 'expires_at_display' => $fetchRequest->effectiveExpiresAt()->format('M j, g:i A'),
+                'delivery_deadline' => $fetchRequest->effectiveDeliveryDeadline()->toIso8601String(),
+                'delivery_deadline_display' => $fetchRequest->effectiveDeliveryDeadline()->format('M j, g:i A'),
+                'status' => $fetchRequest->status,
+                'can_accept' => (int) $fetchRequest->user_id !== (int) $request->user()->getKey(),
                 'requester' => [
+                    'id' => $fetchRequest->user->getKey(),
                     'name' => $fetchRequest->user->name,
                 ],
             ])->values(),
+            'available_ids' => FetchRequest::query()
+                ->live()
+                ->latest('id')
+                ->limit(30)
+                ->pluck('id'),
         ]);
     }
 }

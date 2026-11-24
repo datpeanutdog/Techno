@@ -7,33 +7,29 @@ import {
   RefreshControl,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, styles } from '../App';
-import { FetchRequest, getAuthToken, requestJson } from '../src/lib/api';
+import { FetchDashboard, FetchRequest, getAuthToken, requestJson } from '../src/lib/api';
 import { MenuButton } from '../src/components/NavigationDrawer';
 import { useAppTheme } from '../src/lib/theme';
-
-const DURATION_UNITS = ['minutes', 'hours', 'days'] as const;
-type DurationUnit = (typeof DURATION_UNITS)[number];
 
 export default function FetchScreen() {
   const { mode } = useAppTheme();
   const [requests, setRequests] = useState<FetchRequest[]>([]);
-  const [itemName, setItemName] = useState('');
-  const [details, setDetails] = useState('');
-  const [budget, setBudget] = useState('');
-  const [location, setLocation] = useState('');
-  const [durationValue, setDurationValue] = useState('30');
-  const [durationUnit, setDurationUnit] = useState<DurationUnit>('minutes');
+  const [dashboard, setDashboard] = useState<FetchDashboard>({ accepted: [], posted: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [activeActionId, setActiveActionId] = useState<string | null>(null);
+  const [nowTimestamp, setNowTimestamp] = useState(0);
   const latestId = useRef(0);
+
+  const loadDashboard = useCallback(async () => {
+    const result = await requestJson<FetchDashboard>('/fetch/requests/mine');
+    setDashboard(result.data);
+  }, []);
 
   const loadRequests = useCallback(async (refreshOnly = false) => {
     try {
@@ -45,27 +41,56 @@ export default function FetchScreen() {
       if (refreshOnly) {
         const updates = await requestJson<FetchRequest[]>(`/fetch/requests/updates?after=${latestId.current}`);
         const incoming = updates.data;
+        const availableIds = new Set((updates.available_ids ?? []).map(String));
         if (incoming.length) {
           latestId.current = Math.max(latestId.current, ...incoming.map((item) => Number(item.id)));
           setRequests((current) => [...incoming, ...current]
-            .filter((item) => new Date(item.expires_at).getTime() > Date.now())
+            .filter((item) => (
+              availableIds.has(String(item.id))
+              && new Date(item.expires_at).getTime() > Date.now()
+            ))
             .slice(0, 30));
         } else {
-          setRequests((current) => current.filter((item) => new Date(item.expires_at).getTime() > Date.now()));
+          setRequests((current) => current.filter((item) => (
+            availableIds.has(String(item.id))
+            && new Date(item.expires_at).getTime() > Date.now()
+          )));
         }
       } else {
         const result = await requestJson<FetchRequest[]>('/fetch/requests');
         setRequests(result.data);
         latestId.current = result.data.reduce((latest, item) => Math.max(latest, Number(item.id)), 0);
       }
+      await loadDashboard();
+      setNowTimestamp(Date.now());
       setError('');
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'Live fetch requests could not be loaded.');
+      setError(issue instanceof Error ? issue.message : 'The fetch board could not be loaded.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [loadDashboard]);
+
+  const performAction = useCallback(async (
+    fetchRequestId: number | string,
+    action: 'accept' | 'delivered' | 'confirm',
+  ) => {
+    const actionId = `${fetchRequestId}-${action}`;
+    setActiveActionId(actionId);
+    setError('');
+
+    try {
+      await requestJson<FetchRequest>(`/fetch/requests/${fetchRequestId}/${action}`, {
+        method: 'POST',
+      });
+      await loadRequests();
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : 'The fetch request could not be updated.');
+    } finally {
+      setActiveActionId(null);
+    }
+  }, [loadRequests]);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -79,37 +104,6 @@ export default function FetchScreen() {
       clearInterval(interval);
     };
   }, [loadRequests]));
-
-  const postRequest = async () => {
-    setPosting(true);
-    setError('');
-    setNotice('');
-    try {
-      const result = await requestJson<FetchRequest>('/fetch/requests', {
-        method: 'POST',
-        body: JSON.stringify({
-          item_name: itemName.trim(),
-          details: details.trim(),
-          budget: budget.trim() || null,
-          delivery_location: location.trim(),
-          duration_value: Number(durationValue),
-          duration_unit: durationUnit,
-        }),
-      });
-      setRequests((current) => [result.data, ...current].slice(0, 30));
-      latestId.current = Math.max(latestId.current, Number(result.data.id));
-      setItemName('');
-      setDetails('');
-      setBudget('');
-      setLocation('');
-      setDurationValue('30');
-      setNotice(result.message ?? 'Your fetch request is live.');
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'Your fetch request could not be posted.');
-    } finally {
-      setPosting(false);
-    }
-  };
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
@@ -137,64 +131,170 @@ export default function FetchScreen() {
           }
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.formCard}>
-            <Text style={styles.formHeading}>Live campus requests</Text>
-            <Text style={styles.formSubheading}>See what students need delivered around campus. This feed refreshes every 15 seconds.</Text>
-            {loading ? <ActivityIndicator color={COLORS.goldDark} style={{ marginTop: 16 }} /> : null}
-            {requests.map((request) => (
-              <View key={request.id} style={{ borderTopWidth: 1, borderTopColor: COLORS.line, paddingVertical: 14 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: COLORS.navy, fontSize: 16, fontWeight: '700' }}>{request.item_name}</Text>
-                    <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 3 }}>Posted by {request.requester.name}</Text>
-                  </View>
-                  <Text style={{ color: COLORS.goldDark, fontSize: 12, fontWeight: '700' }}>
-                    {request.budget === null ? 'Budget flexible' : `Up to ${formatFetchBudget(request.budget)}`}
-                  </Text>
-                </View>
-                <Text style={{ color: COLORS.ink, fontSize: 13, lineHeight: 19, marginTop: 9 }}>{request.details}</Text>
-                <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 8 }}>
-                  Deliver to <Text style={{ color: COLORS.navy, fontWeight: '700' }}>{request.delivery_location}</Text>
-                </Text>
-                <Text style={{ color: COLORS.muted, fontSize: 11, marginTop: 4 }}>Expires {request.expires_at_display}</Text>
-              </View>
-            ))}
-            {!loading && requests.length === 0 ? <Text style={styles.formSubheading}>No live requests at the moment. Post what you need below.</Text> : null}
+          <View style={styles.fetchHeading}>
+            <Text style={styles.fetchEyebrow}>CAMPUS REQUEST BOARD</Text>
+            <Text style={styles.formHeading}>Live fetch requests</Text>
+            <Text style={styles.formSubheading}>See what students need delivered around campus.</Text>
           </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/fetch-create')}
+            style={[styles.primaryButton, styles.fetchCreateButton]}
+          >
+            <Text style={styles.primaryButtonText}>＋  Post a fetch request</Text>
+          </Pressable>
+          <Text style={styles.fetchFeedStatus}>Live updates every 15 seconds.</Text>
+          {loading ? <ActivityIndicator color={COLORS.goldDark} style={{ marginTop: 8 }} /> : null}
+          {error ? <Text style={styles.formError}>{error}</Text> : null}
+          {dashboard.accepted.length > 0 ? (
+            <View style={styles.fetchDashboardSection}>
+              <Text style={styles.fetchDashboardHeading}>Jobs you accepted</Text>
+              {dashboard.accepted.map((job) => {
+                const deadlinePassed = nowTimestamp > new Date(job.delivery_deadline).getTime();
+                return (
+                  <View key={`accepted-${job.id}`} style={styles.fetchDashboardCard}>
+                    <View style={styles.fetchRequestHeading}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.fetchRequestTitle}>{job.item_name}</Text>
+                        <Text style={styles.fetchRequester}>Requested by {job.requester.name}</Text>
+                      </View>
+                      <Text style={styles.fetchJobStatus}>
+                        {job.status === 'completed'
+                          ? 'Delivery confirmed'
+                          : job.status === 'delivered'
+                            ? 'Waiting for confirmation'
+                            : deadlinePassed
+                              ? 'Deadline passed'
+                              : 'Currently doing this job'}
+                      </Text>
+                    </View>
+                    <Text style={styles.fetchMeta}>
+                      Deliver to <Text style={styles.fetchLocation}>{job.delivery_location}</Text>
+                    </Text>
+                    <Text style={styles.fetchExpiry}>Deliver by {formatFetchTime(job.delivery_deadline)}</Text>
+                    {job.status === 'accepted' && !deadlinePassed ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={activeActionId !== null}
+                        onPress={() => void performAction(job.id, 'delivered')}
+                        style={[styles.fetchActionButton, activeActionId === `${job.id}-delivered` && styles.disabledButton]}
+                      >
+                        {activeActionId === `${job.id}-delivered`
+                          ? <ActivityIndicator color="#fff" />
+                          : <Text style={styles.primaryButtonText}>Mark as delivered</Text>}
+                      </Pressable>
+                    ) : null}
+                    {job.status === 'accepted' && deadlinePassed ? (
+                      <Text style={styles.fetchDeadlineWarning}>The deadline passed. This request cannot be marked delivered.</Text>
+                    ) : null}
+                    {job.status === 'delivered' ? (
+                      <Text style={styles.fetchDashboardNote}>Delivery reported. Waiting for the requester to confirm.</Text>
+                    ) : null}
+                    {job.status === 'completed' ? (
+                      <Text style={styles.fetchDashboardNote}>The requester confirmed delivery.</Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+          {dashboard.posted.length > 0 ? (
+            <View style={styles.fetchDashboardSection}>
+              <Text style={styles.fetchDashboardHeading}>Requests you posted</Text>
+              {dashboard.posted.map((request) => {
+                const deadlinePassed = request.status === 'accepted'
+                  && nowTimestamp > new Date(request.delivery_deadline).getTime();
 
-          <View style={styles.formCard}>
-            <Text style={styles.formHeading}>Post a fetch request</Text>
-            <Text style={styles.formSubheading}>Use a campus pickup point rather than your home address.</Text>
-            {error ? <Text style={styles.formError}>{error}</Text> : null}
-            {notice ? <Text style={styles.formSubheading}>{notice}</Text> : null}
-            <Text style={styles.fieldLabel}>Item you need</Text>
-            <TextInput maxLength={90} onChangeText={setItemName} placeholder="e.g. Bluebook and black pens" style={styles.formInput} value={itemName} />
-            <Text style={styles.fieldLabel}>Details</Text>
-            <TextInput maxLength={1000} multiline onChangeText={setDetails} placeholder="Add helpful details like size, quantity, or preferred brand." style={[styles.formInput, styles.multilineInput]} value={details} />
-            <Text style={styles.fieldLabel}>Budget (optional)</Text>
-            <TextInput keyboardType="decimal-pad" onChangeText={setBudget} placeholder="₱" style={styles.formInput} value={budget} />
-            <Text style={styles.fieldLabel}>Campus delivery spot</Text>
-            <TextInput maxLength={100} onChangeText={setLocation} placeholder="e.g. Main library entrance" style={styles.formInput} value={location} />
-            <Text style={styles.fieldLabel}>How long should it stay live?</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TextInput keyboardType="number-pad" onChangeText={setDurationValue} style={[styles.formInput, { flex: 1 }]} value={durationValue} />
-              {DURATION_UNITS.map((unit) => (
+                return (
+                  <View key={`posted-${request.id}`} style={styles.fetchDashboardCard}>
+                    <View style={styles.fetchRequestHeading}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.fetchRequestTitle}>{request.item_name}</Text>
+                        <Text style={styles.fetchRequester}>
+                          {request.accepted_by
+                            ? `Accepted by ${request.accepted_by.name}`
+                            : 'Accepted by another student'}
+                        </Text>
+                      </View>
+                      <Text style={styles.fetchJobStatus}>
+                        {request.status === 'completed'
+                          ? 'Delivery confirmed'
+                          : request.status === 'delivered'
+                            ? 'Confirm delivery'
+                            : deadlinePassed
+                              ? 'Deadline passed'
+                              : 'Delivery Ongoing'}
+                      </Text>
+                    </View>
+                    <Text style={styles.fetchMeta}>
+                      Deliver to <Text style={styles.fetchLocation}>{request.delivery_location}</Text>
+                    </Text>
+                    <Text style={styles.fetchExpiry}>Deliver by {formatFetchTime(request.delivery_deadline)}</Text>
+                    {request.status === 'delivered' ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={activeActionId !== null}
+                        onPress={() => void performAction(request.id, 'confirm')}
+                        style={[styles.fetchActionButton, activeActionId === `${request.id}-confirm` && styles.disabledButton]}
+                      >
+                        {activeActionId === `${request.id}-confirm`
+                          ? <ActivityIndicator color="#fff" />
+                          : <Text style={styles.primaryButtonText}>Confirm delivery</Text>}
+                      </Pressable>
+                    ) : null}
+                    {request.status === 'completed' ? (
+                      <Text style={styles.fetchDashboardNote}>Delivery was confirmed by you.</Text>
+                    ) : null}
+                    {deadlinePassed ? (
+                      <Text style={styles.fetchDeadlineWarning}>The deadline passed without an on-time delivery report.</Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+          {requests.map((request) => (
+            <View key={request.id} style={styles.fetchRequestCard}>
+              <View style={styles.fetchRequestHeading}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fetchRequestTitle}>{request.item_name}</Text>
+                  <Text style={styles.fetchRequester}>Posted by {request.requester.name}</Text>
+                </View>
+                <Text style={styles.fetchBudget}>
+                  {request.budget === null ? 'Budget flexible' : `Up to ${formatFetchBudget(request.budget)}`}
+                </Text>
+              </View>
+              <Text style={styles.fetchDetails}>{request.details}</Text>
+              <Text style={styles.fetchMeta}>
+                Deliver to <Text style={styles.fetchLocation}>{request.delivery_location}</Text>
+              </Text>
+              <View style={styles.fetchTimeRow}>
+                <Text style={styles.fetchMeta}>Posted {formatFetchTime(request.created_at)}</Text>
+                <Text style={styles.fetchExpiry}>Expires {formatFetchTime(request.expires_at)}</Text>
+                <Text style={styles.fetchExpiry}>Deliver by {formatFetchTime(request.delivery_deadline)}</Text>
+              </View>
+              {request.can_accept ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityState={{ selected: durationUnit === unit }}
-                  key={unit}
-                  onPress={() => setDurationUnit(unit)}
-                  style={[styles.choiceChip, durationUnit === unit && styles.choiceChipSelected]}
+                  disabled={activeActionId !== null}
+                  onPress={() => void performAction(request.id, 'accept')}
+                  style={[styles.fetchActionButton, activeActionId === `${request.id}-accept` && styles.disabledButton]}
                 >
-                  <Text style={[styles.choiceChipText, durationUnit === unit && styles.choiceChipTextSelected]}>{unit}</Text>
+                  {activeActionId === `${request.id}-accept`
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={styles.primaryButtonText}>Accept this request</Text>}
                 </Pressable>
-              ))}
+              ) : (
+                <Text style={styles.fetchDashboardNote}>This is your request.</Text>
+              )}
             </View>
-            <Text style={styles.formSubheading}>Choose 5 minutes to 1 day.</Text>
-            <Pressable disabled={posting} onPress={() => void postRequest()} style={[styles.primaryButton, posting && styles.disabledButton]}>
-              {posting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Post request</Text>}
-            </Pressable>
-          </View>
+          ))}
+          {!loading && requests.length === 0 ? (
+            <View style={styles.fetchEmptyState}>
+              <Text style={styles.formSubheading}>No live requests at the moment.</Text>
+              <Text style={styles.formSubheading}>Check back soon or post what you need.</Text>
+            </View>
+          ) : null}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -203,4 +303,13 @@ export default function FetchScreen() {
 
 function formatFetchBudget(budget: number | string): string {
   return `₱${Number(budget).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+}
+
+function formatFetchTime(timestamp: string): string {
+  return new Intl.DateTimeFormat('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestamp));
 }

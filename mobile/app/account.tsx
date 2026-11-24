@@ -27,6 +27,7 @@ import {
   UserProfile,
 } from '../src/lib/api';
 import { MenuButton } from '../src/components/NavigationDrawer';
+import { BrandMark } from '../src/components/BrandMark';
 import { useAppTheme } from '../src/lib/theme';
 
 type AccountMode = 'login' | 'register' | 'forgot';
@@ -38,6 +39,7 @@ function getExternalAvatarUrl(avatarUrl: string | null): string {
 export default function AccountScreen() {
   const { mode: themeMode } = useAppTheme();
   const {
+    section,
     returnTo,
     listingSlug,
     editId,
@@ -46,6 +48,7 @@ export default function AccountScreen() {
     reportedUserId,
     reportedUserName,
   } = useLocalSearchParams<{
+    section?: string;
     returnTo?: string;
     listingSlug?: string;
     editId?: string;
@@ -54,6 +57,7 @@ export default function AccountScreen() {
     reportedUserId?: string;
     reportedUserName?: string;
   }>();
+  const accountSection = section === 'listings' ? 'listings' : 'profile';
   const [user, setUser] = useState<UserProfile | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [mode, setMode] = useState<AccountMode>('login');
@@ -320,18 +324,16 @@ export default function AccountScreen() {
               <Pressable onPress={() => router.back()} style={styles.backButton}>
                 <Text style={styles.backButtonText}>‹  Back</Text>
               </Pressable>
-              <Text style={styles.headerRouteTitle}>Your account</Text>
+              <Text style={styles.headerRouteTitle}>
+                {accountSection === 'listings' ? 'Manage listings' : 'Profile settings'}
+              </Text>
               <MenuButton />
             </>
           ) : (
             <>
               <View style={styles.brand}>
-                <View style={styles.brandIcon}>
-                  <Text style={styles.brandIconText}>✓</Text>
-                </View>
-                <View>
-                  <Text style={styles.brandName}>Pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
-                </View>
+                <BrandMark />
+                <Text style={styles.brandName}>Pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
               </View>
               <MenuButton />
             </>
@@ -348,68 +350,78 @@ export default function AccountScreen() {
             ) : null}
             {user ? (
               <>
-                <View style={styles.formCard}>
-                  <Text style={styles.formHeading}>Your student profile</Text>
-                  <Text style={styles.formSubheading}>Manage your profile and campus listings.</Text>
-                  <Text style={styles.formSubheading}>Account ID: {user.account_identifier}</Text>
-                  <Pressable accessibilityRole="button" onPress={() => void pickAvatar()} style={{ alignSelf: 'flex-start', marginVertical: 16 }}>
-                    {avatar ? (
-                      <Image source={{ uri: avatar.uri }} style={{ width: 76, height: 76, borderRadius: 38 }} />
-                    ) : user.avatar_url ? (
-                      <Image source={{ uri: user.avatar_url }} style={{ width: 76, height: 76, borderRadius: 38 }} />
-                    ) : (
-                      <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: COLORS.paleGold, alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ color: COLORS.navy, fontSize: 28, fontWeight: '700' }}>{user.name.slice(0, 1).toUpperCase()}</Text>
-                      </View>
-                    )}
-                    <Text style={{ color: COLORS.goldDark, fontSize: 12, marginTop: 6 }}>Change photo</Text>
-                  </Pressable>
-                  <Text style={styles.fieldLabel}>Display name</Text>
-                  <TextInput defaultValue={user.name} onChangeText={(value) => { name.current = value; }} style={styles.formInput} />
-                  <Text style={styles.fieldLabel}>Email</Text>
-                  <TextInput editable={false} value={user.email} style={styles.formInput} />
-                  <Text style={styles.fieldLabel}>Campus</Text>
-                  <TextInput defaultValue={user.campus ?? ''} onChangeText={(value) => { campus.current = value; }} placeholder="Your school or campus" style={styles.formInput} />
-                  <Text style={styles.fieldLabel}>Short bio</Text>
-                  <TextInput defaultValue={user.bio ?? ''} maxLength={500} multiline onChangeText={(value) => { bio.current = value; }} placeholder="A little about you" style={[styles.formInput, styles.multilineInput]} />
-                  <Text style={styles.fieldLabel}>Or photo link</Text>
-                  <TextInput autoCapitalize="none" defaultValue={getExternalAvatarUrl(user.avatar_url)} keyboardType="url" onChangeText={(value) => { avatarUrl.current = value; }} placeholder="https://..." style={styles.formInput} />
-                  <Pressable disabled={busy} onPress={() => void saveProfile()} style={styles.primaryButton}>
-                    <Text style={styles.primaryButtonText}>{busy ? 'Saving…' : 'Save profile'}</Text>
-                  </Pressable>
-                  <Pressable disabled={busy} onPress={() => router.replace('/')} style={[styles.primaryButton, { marginTop: 10 }]}>
-                    <Text style={styles.primaryButtonText}>Continue to campus hub</Text>
-                  </Pressable>
-                  <Pressable disabled={busy} onPress={() => void logout()} style={[styles.primaryButton, { marginTop: 10, backgroundColor: COLORS.paleNeutral }]}>
-                    <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>Log out</Text>
-                  </Pressable>
-                </View>
-
-                <View style={styles.formCard}>
-                  <Text style={styles.formHeading}>Customer service</Text>
-                  <Text style={styles.formSubheading}>Report inappropriate behavior or a scam and follow the review status.</Text>
-                  <Pressable disabled={busy} onPress={() => router.push('/support')} style={[styles.primaryButton, { marginTop: 16 }]}>
-                    <Text style={styles.primaryButtonText}>Contact customer support</Text>
-                  </Pressable>
-                </View>
-
-                <View style={styles.formCard}>
-                  <Text style={styles.formHeading}>Your listings</Text>
-                  {listings.length ? listings.map((listing) => (
-                    <View key={listing.id} style={{ borderTopWidth: 1, borderTopColor: COLORS.line, paddingVertical: 14 }}>
-                      <Text style={{ color: COLORS.navy, fontWeight: '700' }}>{listing.title}</Text>
-                      <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 3 }}>{listing.type === 'rent' ? 'Rent' : 'Sale'} · {listing.location}</Text>
-                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-                        <Pressable onPress={() => router.push({ pathname: '/sell', params: { editId: listing.id } })} style={styles.choiceChip}>
-                          <Text style={styles.choiceChipText}>Edit</Text>
-                        </Pressable>
-                        <Pressable disabled={busy} onPress={() => confirmRemoveListing(listing)} style={styles.choiceChip}>
-                          <Text style={styles.choiceChipText}>Remove</Text>
-                        </Pressable>
-                      </View>
+                {accountSection === 'profile' ? (
+                  <>
+                    <View style={styles.formCard}>
+                      <Text style={styles.formHeading}>Your student profile</Text>
+                      <Text style={styles.formSubheading}>Account ID: {user.account_identifier}</Text>
+                      <Pressable accessibilityRole="button" onPress={() => void pickAvatar()} style={{ alignSelf: 'flex-start', marginVertical: 16 }}>
+                        {avatar ? (
+                          <Image source={{ uri: avatar.uri }} style={{ width: 76, height: 76, borderRadius: 38 }} />
+                        ) : user.avatar_url ? (
+                          <Image source={{ uri: user.avatar_url }} style={{ width: 76, height: 76, borderRadius: 38 }} />
+                        ) : (
+                          <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: COLORS.paleGold, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ color: COLORS.navy, fontSize: 28, fontWeight: '700' }}>{user.name.slice(0, 1).toUpperCase()}</Text>
+                          </View>
+                        )}
+                        <Text style={{ color: COLORS.goldDark, fontSize: 12, marginTop: 6 }}>Change photo</Text>
+                      </Pressable>
+                      <Text style={styles.fieldLabel}>Display name</Text>
+                      <TextInput defaultValue={user.name} onChangeText={(value) => { name.current = value; }} style={styles.formInput} />
+                      <Text style={styles.fieldLabel}>Email</Text>
+                      <TextInput editable={false} value={user.email} style={styles.formInput} />
+                      <Text style={styles.fieldLabel}>Campus</Text>
+                      <TextInput defaultValue={user.campus ?? ''} onChangeText={(value) => { campus.current = value; }} placeholder="Your school or campus" style={styles.formInput} />
+                      <Text style={styles.fieldLabel}>Short bio</Text>
+                      <TextInput defaultValue={user.bio ?? ''} maxLength={500} multiline onChangeText={(value) => { bio.current = value; }} placeholder="A little about you" style={[styles.formInput, styles.multilineInput]} />
+                      <Text style={styles.fieldLabel}>Or photo link</Text>
+                      <TextInput autoCapitalize="none" defaultValue={getExternalAvatarUrl(user.avatar_url)} keyboardType="url" onChangeText={(value) => { avatarUrl.current = value; }} placeholder="https://..." style={styles.formInput} />
+                      <Pressable disabled={busy} onPress={() => void saveProfile()} style={styles.primaryButton}>
+                        <Text style={styles.primaryButtonText}>{busy ? 'Saving…' : 'Save profile'}</Text>
+                      </Pressable>
+                      <Pressable disabled={busy} onPress={() => router.replace('/')} style={[styles.primaryButton, { marginTop: 10 }]}>
+                        <Text style={styles.primaryButtonText}>Continue to campus hub</Text>
+                      </Pressable>
+                      <Pressable disabled={busy} onPress={() => void logout()} style={[styles.primaryButton, { marginTop: 10, backgroundColor: COLORS.paleNeutral }]}>
+                        <Text style={[styles.primaryButtonText, { color: COLORS.navy }]}>Log out</Text>
+                      </Pressable>
                     </View>
-                  )) : <Text style={styles.formSubheading}>You haven’t listed anything yet.</Text>}
-                </View>
+
+                    <View style={styles.formCard}>
+                      <Text style={styles.formHeading}>Customer service</Text>
+                      <Text style={styles.formSubheading}>Report inappropriate behavior or a scam and follow the review status.</Text>
+                      <Pressable disabled={busy} onPress={() => router.push('/support')} style={[styles.primaryButton, { marginTop: 16 }]}>
+                        <Text style={styles.primaryButtonText}>Contact customer support</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.formCard}>
+                    <Text style={styles.formHeading}>Your listings</Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => router.push('/sell')}
+                      style={styles.primaryButton}
+                    >
+                      <Text style={styles.primaryButtonText}>List an item</Text>
+                    </Pressable>
+                    {listings.length ? listings.map((listing) => (
+                      <View key={listing.id} style={{ borderTopWidth: 1, borderTopColor: COLORS.line, paddingVertical: 14 }}>
+                        <Text style={{ color: COLORS.navy, fontWeight: '700' }}>{listing.title}</Text>
+                        <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 3 }}>{listing.type === 'rent' ? 'Rent' : 'Sale'} · {listing.location}</Text>
+                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                          <Pressable onPress={() => router.push({ pathname: '/sell', params: { editId: listing.id } })} style={styles.choiceChip}>
+                            <Text style={styles.choiceChipText}>Edit</Text>
+                          </Pressable>
+                          <Pressable disabled={busy} onPress={() => confirmRemoveListing(listing)} style={styles.choiceChip}>
+                            <Text style={styles.choiceChipText}>Remove</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )) : <Text style={styles.formSubheading}>You haven’t listed anything yet.</Text>}
+                  </View>
+                )}
               </>
             ) : (
               <View style={styles.formCard}>

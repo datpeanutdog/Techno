@@ -55,7 +55,7 @@ class FetchRequestTest extends TestCase
             ->assertDontSee('Expired request')
             ->assertDontSee('Old request from before expiry rules')
             ->assertDontSee('name="item_name"', false)
-            ->assertSeeInOrder(['>Fetch</span>', '>Save for later</span>'], false);
+            ->assertSeeInOrder(['>Saved finds</span>', '>Fetch request board</span>'], false);
     }
 
     public function test_fetch_request_form_is_separate_and_requires_a_duration(): void
@@ -66,6 +66,8 @@ class FetchRequestTest extends TestCase
             ->assertSee('Post a fetch request')
             ->assertSee('name="duration_value"', false)
             ->assertSee('name="duration_unit"', false)
+            ->assertSee('name="delivery_duration_value"', false)
+            ->assertSee('name="delivery_duration_unit"', false)
             ->assertSee('value="minutes"', false)
             ->assertSee('value="hours"', false)
             ->assertSee('value="days"', false)
@@ -74,7 +76,7 @@ class FetchRequestTest extends TestCase
 
     public function test_user_can_post_a_fetch_request_and_poll_for_it_until_its_expiry(): void
     {
-        $this->travelTo(Carbon::create(2026, 1, 1, 12, 0, 0));
+        $this->travelTo(Carbon::create(2026, 1, 1, 17, 45, 0));
         $user = User::factory()->create(['name' => 'Taylor Park']);
         $previousRequest = User::factory()->create()->fetchRequests()->create([
             'item_name' => 'Previous request',
@@ -95,14 +97,17 @@ class FetchRequestTest extends TestCase
                 'details' => 'Size medium, needed for chemistry lab.',
                 'budget' => '450',
                 'delivery_location' => 'Science building lobby',
-                'duration_value' => '30',
+                'duration_value' => '5',
                 'duration_unit' => 'minutes',
+                'delivery_duration_value' => '30',
+                'delivery_duration_unit' => 'minutes',
             ])
             ->assertRedirect(route('fetch.index'))
             ->assertSessionHas('status', 'Your fetch request is live.');
 
         $fetchRequest = $user->fetchRequests()->where('item_name', 'A lab coat')->firstOrFail();
-        $this->assertSame('2026-01-01 12:30:00', $fetchRequest->expires_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-01-01 17:50:00', $fetchRequest->expires_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-01-01 18:15:00', $fetchRequest->delivery_deadline->format('Y-m-d H:i:s'));
         $this->assertDatabaseHas('fetch_requests', [
             'item_name' => 'A lab coat',
             'budget' => '450.00',
@@ -115,8 +120,26 @@ class FetchRequestTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.item_name', 'A lab coat')
             ->assertJsonPath('data.0.requester.name', 'Taylor Park')
+            ->assertJsonPath('data.0.created_at', $fetchRequest->created_at->toIso8601String())
             ->assertJsonPath('data.0.expires_at', $fetchRequest->expires_at->toIso8601String())
+            ->assertJsonPath('data.0.delivery_deadline', $fetchRequest->delivery_deadline->toIso8601String())
             ->assertJsonMissingPath('data.0.requester.email');
+
+        $this->get(route('fetch.index'))
+            ->assertOk()
+            ->assertSee('Posted Jan 1, 5:45 PM UTC')
+            ->assertSee('Expires Jan 1, 5:50 PM UTC')
+            ->assertSee('Deliver by Jan 1, 6:15 PM UTC');
+
+        $this->travelTo(Carbon::create(2026, 1, 1, 17, 50, 0));
+
+        $this->getJson(route('fetch.requests.updates', ['after' => $previousRequest->id]))
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->get(route('fetch.index'))
+            ->assertOk()
+            ->assertDontSee('A lab coat');
     }
 
     public static function validDurations(): array
@@ -140,6 +163,8 @@ class FetchRequestTest extends TestCase
                 'delivery_location' => 'Campus',
                 'duration_value' => $durationValue,
                 'duration_unit' => $durationUnit,
+                'delivery_duration_value' => 2,
+                'delivery_duration_unit' => 'days',
             ])
             ->assertRedirect(route('fetch.index'));
 
@@ -168,6 +193,8 @@ class FetchRequestTest extends TestCase
                 'delivery_location' => 'Science building',
                 'duration_value' => $durationValue,
                 'duration_unit' => $durationUnit,
+                'delivery_duration_value' => 2,
+                'delivery_duration_unit' => 'days',
             ])
             ->assertRedirect(route('fetch.requests.create'))
             ->assertSessionHasErrors('duration_value');
@@ -185,9 +212,200 @@ class FetchRequestTest extends TestCase
                 'delivery_location' => 'Science building',
             ])
             ->assertRedirect(route('fetch.requests.create'))
-            ->assertSessionHasErrors(['duration_value', 'duration_unit']);
+            ->assertSessionHasErrors([
+                'duration_value',
+                'duration_unit',
+                'delivery_duration_value',
+                'delivery_duration_unit',
+            ]);
 
         $this->assertDatabaseCount('fetch_requests', 0);
+    }
+
+    public static function invalidDeliveryDeadlines(): array
+    {
+        return [
+            'under five minutes' => [4, 'minutes', 5, 'minutes'],
+            'not after the live window' => [30, 'minutes', 30, 'minutes'],
+            'over thirty days' => [31, 'days', 5, 'minutes'],
+        ];
+    }
+
+    #[DataProvider('invalidDeliveryDeadlines')]
+    public function test_fetch_request_rejects_delivery_deadlines_that_cannot_be_met(
+        int $deliveryDurationValue,
+        string $deliveryDurationUnit,
+        int $liveDurationValue,
+        string $liveDurationUnit,
+    ): void {
+        $this->actingAs(User::factory()->create())
+            ->from(route('fetch.requests.create'))
+            ->post(route('fetch.requests.store'), [
+                'item_name' => 'A lab coat',
+                'details' => 'Needed for chemistry lab.',
+                'delivery_location' => 'Science building',
+                'duration_value' => $liveDurationValue,
+                'duration_unit' => $liveDurationUnit,
+                'delivery_duration_value' => $deliveryDurationValue,
+                'delivery_duration_unit' => $deliveryDurationUnit,
+            ])
+            ->assertRedirect(route('fetch.requests.create'))
+            ->assertSessionHasErrors('delivery_duration_value');
+
+        $this->assertDatabaseCount('fetch_requests', 0);
+    }
+
+    public function test_another_user_can_accept_a_live_request_once_and_see_it_on_the_dashboard(): void
+    {
+        $requester = User::factory()->create(['name' => 'Jamie Requester']);
+        $fetchRequest = $requester->fetchRequests()->create([
+            'item_name' => 'Bluebook',
+            'details' => 'Needed for class.',
+            'delivery_location' => 'Library entrance',
+            'expires_at' => now()->addMinutes(5),
+            'delivery_deadline' => now()->addHour(),
+        ]);
+        $runner = User::factory()->create(['name' => 'Taylor Runner']);
+
+        $this->actingAs($requester)
+            ->from(route('fetch.index'))
+            ->post(route('fetch.requests.accept', $fetchRequest))
+            ->assertRedirect(route('fetch.index'))
+            ->assertSessionHasErrors('fetch_request');
+
+        $this->actingAs($runner)
+            ->post(route('fetch.requests.accept', $fetchRequest))
+            ->assertRedirect(route('fetch.index'))
+            ->assertSessionHas('status', 'You accepted this fetch request.');
+
+        $this->assertDatabaseHas('fetch_requests', [
+            'id' => $fetchRequest->id,
+            'status' => 'accepted',
+            'accepted_by_id' => $runner->id,
+        ]);
+
+        $this->actingAs($runner)
+            ->get(route('fetch.index'))
+            ->assertOk()
+            ->assertSee('Currently doing this job')
+            ->assertSee('Deliver by')
+            ->assertSee('Bluebook');
+
+        $this->actingAs($requester)
+            ->get(route('fetch.index'))
+            ->assertOk()
+            ->assertSee('Taylor Runner')
+            ->assertSee('Delivery Ongoing')
+            ->assertDontSee('name="accept"');
+
+        $this->actingAs(User::factory()->create())
+            ->from(route('fetch.index'))
+            ->post(route('fetch.requests.accept', $fetchRequest))
+            ->assertRedirect(route('fetch.index'))
+            ->assertSessionHasErrors('fetch_request');
+
+        $this->assertDatabaseHas('fetch_requests', [
+            'id' => $fetchRequest->id,
+            'accepted_by_id' => $runner->id,
+        ]);
+    }
+
+    public function test_requester_confirms_delivery_reported_before_the_deadline(): void
+    {
+        $this->travelTo(Carbon::create(2026, 1, 1, 12, 0, 0));
+        $requester = User::factory()->create();
+        $runner = User::factory()->create(['name' => 'Taylor Runner']);
+        $fetchRequest = $requester->fetchRequests()->create([
+            'item_name' => 'Lab coat',
+            'details' => 'Size medium.',
+            'delivery_location' => 'Science building',
+            'expires_at' => now()->addMinutes(5),
+            'delivery_deadline' => now()->addHour(),
+        ]);
+
+        $this->actingAs($runner)
+            ->post(route('fetch.requests.accept', $fetchRequest))
+            ->assertRedirect(route('fetch.index'));
+
+        $this->travelTo(Carbon::create(2026, 1, 1, 12, 59, 0));
+        $this->actingAs($runner)
+            ->post(route('fetch.requests.delivered', $fetchRequest))
+            ->assertRedirect(route('fetch.index'))
+            ->assertSessionHas('status', 'Delivery reported. The requester will confirm it.');
+
+        $this->travelTo(Carbon::create(2026, 1, 1, 13, 30, 0));
+        $this->actingAs($requester)
+            ->post(route('fetch.requests.confirm', $fetchRequest))
+            ->assertRedirect(route('fetch.index'))
+            ->assertSessionHas('status', 'Delivery confirmed.');
+
+        $this->assertDatabaseHas('fetch_requests', [
+            'id' => $fetchRequest->id,
+            'status' => 'completed',
+            'delivered_at' => '2026-01-01 12:59:00',
+            'confirmed_at' => '2026-01-01 13:30:00',
+        ]);
+
+        $this->actingAs($runner)
+            ->get(route('fetch.index'))
+            ->assertOk()
+            ->assertSee('Delivery confirmed');
+    }
+
+    public function test_accepted_user_cannot_report_delivery_after_the_deadline(): void
+    {
+        $this->travelTo(Carbon::create(2026, 1, 1, 12, 0, 0));
+        $requester = User::factory()->create();
+        $runner = User::factory()->create();
+        $fetchRequest = $requester->fetchRequests()->create([
+            'item_name' => 'Lab coat',
+            'details' => 'Size medium.',
+            'delivery_location' => 'Science building',
+            'expires_at' => now()->addMinutes(5),
+            'delivery_deadline' => now()->addHour(),
+        ]);
+
+        $this->actingAs($runner)
+            ->post(route('fetch.requests.accept', $fetchRequest))
+            ->assertRedirect(route('fetch.index'));
+
+        $this->travelTo(Carbon::create(2026, 1, 1, 13, 1, 0));
+        $this->actingAs($runner)
+            ->from(route('fetch.index'))
+            ->post(route('fetch.requests.delivered', $fetchRequest))
+            ->assertRedirect(route('fetch.index'))
+            ->assertSessionHasErrors('fetch_request');
+
+        $this->assertDatabaseHas('fetch_requests', [
+            'id' => $fetchRequest->id,
+            'status' => 'accepted',
+            'delivered_at' => null,
+        ]);
+    }
+
+    public function test_fetch_request_cannot_be_accepted_after_its_live_expiration(): void
+    {
+        $requester = User::factory()->create();
+        $runner = User::factory()->create();
+        $fetchRequest = $requester->fetchRequests()->create([
+            'item_name' => 'Lab coat',
+            'details' => 'Size medium.',
+            'delivery_location' => 'Science building',
+            'expires_at' => now()->subMinute(),
+            'delivery_deadline' => now()->addHour(),
+        ]);
+
+        $this->actingAs($runner)
+            ->from(route('fetch.index'))
+            ->post(route('fetch.requests.accept', $fetchRequest))
+            ->assertRedirect(route('fetch.index'))
+            ->assertSessionHasErrors('fetch_request');
+
+        $this->assertDatabaseHas('fetch_requests', [
+            'id' => $fetchRequest->id,
+            'status' => 'open',
+            'accepted_by_id' => null,
+        ]);
     }
 
     public function test_fetch_board_and_updates_require_a_signed_in_account(): void

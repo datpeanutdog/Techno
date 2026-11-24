@@ -19,6 +19,7 @@ class ListingController extends Controller
             'mode' => ['nullable', 'in:sale,rent'],
             'category' => ['nullable', 'in:'.implode(',', ListingCategories::ALL)],
             'sort' => ['nullable', 'in:latest,price_low,price_high'],
+            'view' => ['nullable', 'in:saved'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -28,8 +29,13 @@ class ListingController extends Controller
                 ->withCount('receivedReviews')
                 ->withAvg('receivedReviews', 'rating')])
             ->where('is_available', true)
-            ->whereIn('category', ListingCategories::ALL)
-            ->where('type', $filters['mode'] ?? 'sale');
+            ->whereIn('category', ListingCategories::ALL);
+
+        if (($filters['view'] ?? null) === 'saved') {
+            $query->whereIn('id', $request->user()->savedListings()->select('listings.id'));
+        } else {
+            $query->where('type', $filters['mode'] ?? 'sale');
+        }
 
         if (! empty($filters['q'])) {
             $term = $filters['q'];
@@ -54,7 +60,7 @@ class ListingController extends Controller
             default => $query->orderByDesc('featured')->latest(),
         };
 
-        $listings = $query->paginate(20);
+        $listings = $query->paginate(8);
 
         return response()->json([
             'data' => $listings->items(),

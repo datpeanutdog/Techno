@@ -41,7 +41,12 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('market-sell-link', false)
             ->assertDontSee('Good finds, shared by students like you.')
             ->assertDontSee('Buy · sell · rent · pass it on')
-            ->assertSeeInOrder(['class="is-active"', 'aria-current="page"', '>Buy</span>'], false);
+            ->assertSeeInOrder([
+                'class="is-active"',
+                '>Browse marketplace</span>',
+                '<nav class="market-tabs" aria-label="Browse buy and rent listings">',
+                '<strong>Buy</strong>',
+            ], false);
     }
 
     public function test_sidebar_shows_profile_and_spaced_navigation_in_order(): void
@@ -53,6 +58,8 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('Pass a school find')
             ->assertSee('<option value="hour"', false)
             ->assertSee('List an item')
+            ->assertDontSee('class="button button-navy header-sell"', false)
+            ->assertDontSee('Back to the marketplace')
             ->assertDontSee('>Sell</span>', false)
             ->assertSee('<a class="sidebar-profile-link" href="'.route('profile.edit').'"', false)
             ->assertSee('class="sidebar-profile-name"', false)
@@ -60,20 +67,39 @@ class MarketplaceTest extends TestCase
                 'class="sidebar-profile-link"',
                 'class="sidebar-profile-avatar sidebar-profile-initial"',
                 'class="sidebar-profile-name"',
-                '>Buy</span>',
-                '>Rent</span>',
-                '>Fetch</span>',
-                '>Save for later</span>',
+                'View profile',
+                '>Browse marketplace</span>',
+                '>Browse rentals</span>',
+                '>Saved finds</span>',
+                '>Fetch request board</span>',
                 'Your account',
-                '>Manage Listing</span>',
+                '>Manage listings</span>',
+                'href="'.route('listings.create').'"',
+                '>List an item</span>',
+                'href="'.route('conversations.index').'"',
+                '>Message inbox</span>',
                 'href="'.route('settings.index').'"',
                 '>Settings</span>',
-                'href="'.route('conversations.index').'"',
-                '>Messages</span>',
+                'Help',
+                'href="'.route('support.reports.create').'"',
+                '>Report an account</span>',
                 'href="'.route('support.reports.index').'"',
-                '>Support</span>',
+                '>Contact support</span>',
             ], false)
             ->assertDontSee('<p class="sidebar-section-label">Marketplace</p>', false);
+    }
+
+    public function test_admin_sidebar_links_to_web_admin_tools(): void
+    {
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('marketplace.index'))
+            ->assertOk()
+            ->assertSee('href="'.route('admin.support-reports.index').'"', false)
+            ->assertSee('>Admin tools</span>', false)
+            ->assertSee('href="'.route('admin.users.index').'"', false)
+            ->assertSee('>Manage users</span>', false)
+            ->assertSee('href="'.route('admin.suspension-appeals.index').'"', false)
+            ->assertSee('>Suspension appeals</span>', false);
     }
 
     public function test_settings_navigation_opens_theme_settings(): void
@@ -81,7 +107,7 @@ class MarketplaceTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('settings.index'))
             ->assertOk()
-            ->assertSeeInOrder(['>Manage Listing</span>', '>Settings</span>', '>Messages</span>'], false)
+            ->assertSeeInOrder(['>Manage listings</span>', '>List an item</span>', '>Message inbox</span>', '>Settings</span>'], false)
             ->assertSee('name="theme"', false)
             ->assertSee('value="light"', false)
             ->assertSee('value="dark"', false)
@@ -101,7 +127,7 @@ class MarketplaceTest extends TestCase
         ] as $page) {
             $this->actingAs($user)->get($page)
                 ->assertOk()
-                ->assertSee('Save for later')
+                ->assertSee('Saved finds')
                 ->assertSee('data-saved-link', false)
                 ->assertDontSee('class="button button-navy header-sell"', false)
                 ->assertDontSee('Good finds, shared by students like you.')
@@ -178,7 +204,7 @@ class MarketplaceTest extends TestCase
             ->assertSee('data-saved-view', false)
             ->assertSee('data-saved-link', false)
             ->assertDontSee('Search campus listings')
-            ->assertDontSee('List an item')
+            ->assertSee('>List an item</span>', false)
             ->assertDontSee('Browse buy and rent listings')
             ->assertDontSee('Showing 2 campus finds')
             ->assertSee('Saved sale item')
@@ -225,7 +251,7 @@ class MarketplaceTest extends TestCase
             ->assertSee('Bookmark a listing and it will be waiting here.')
             ->assertSee('Browse campus finds')
             ->assertDontSee('Search campus listings')
-            ->assertDontSee('List an item');
+            ->assertSee('>List an item</span>', false);
     }
 
     public function test_saved_marketplace_view_rejects_malformed_favorite_ids(): void

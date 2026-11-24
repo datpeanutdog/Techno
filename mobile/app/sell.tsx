@@ -15,12 +15,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { COLORS, CATEGORY_ICONS, ChoiceChip, Label, styles } from '../App';
+import { CATEGORIES, COLORS, ChoiceChip, Label, styles } from '../App';
 import { getAuthToken, Listing, ListingType, requestJson } from '../src/lib/api';
 import { MenuButton } from '../src/components/NavigationDrawer';
 import { useAppTheme } from '../src/lib/theme';
-
-const categories = Object.keys(CATEGORY_ICONS);
 
 export default function SellScreen() {
   const { mode } = useAppTheme();
@@ -31,7 +29,7 @@ export default function SellScreen() {
   const price = useRef('');
   const [type, setType] = useState<ListingType>('sale');
   const [rentPeriod, setRentPeriod] = useState('day');
-  const [category, setCategory] = useState(categories[0]);
+  const [category, setCategory] = useState(CATEGORIES[0]);
   const location = useRef('');
   const imageUrl = useRef('');
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -183,9 +181,6 @@ export default function SellScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.sellIntro}>
-            <View style={styles.sellSparkle}>
-              <Text style={styles.sellSparkleText}>✳</Text>
-            </View>
             <Text style={styles.sellTitle}>Pass a good find <Text style={styles.sellTitleAccent}>on.</Text></Text>
             <Text style={styles.sellDescription}>
               A textbook, calculator, or dorm essential could be exactly what another student needs.
@@ -265,16 +260,28 @@ export default function SellScreen() {
             <Label required>School category</Label>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.formCategoryScroll}>
               <View style={styles.formCategoryRow}>
-                {categories.map((item) => (
+                {CATEGORIES.map((item) => (
                   <ChoiceChip
                     key={item}
-                    label={`${CATEGORY_ICONS[item]}  ${item}`}
+                    label={item}
                     selected={category === item}
                     onPress={() => setCategory(item)}
                   />
                 ))}
               </View>
             </ScrollView>
+
+            <Label>Condition (optional)</Label>
+            <View style={styles.segmentRow}>
+              {['Brand new', 'Like new', 'Good', 'Fair'].map((item) => (
+                <ChoiceChip
+                  key={item}
+                  label={item}
+                  selected={condition === item}
+                  onPress={() => setCondition(condition === item ? '' : item)}
+                />
+              ))}
+            </View>
 
             <Label required>Campus or pickup area</Label>
             <TextInput
@@ -325,18 +332,6 @@ export default function SellScreen() {
               placeholderTextColor={COLORS.placeholder}
               style={styles.formInput}
             />
-
-            <Label>Condition (optional)</Label>
-            <View style={styles.segmentRow}>
-              {['Brand new', 'Like new', 'Good', 'Fair'].map((item) => (
-                <ChoiceChip
-                  key={item}
-                  label={item}
-                  selected={condition === item}
-                  onPress={() => setCondition(condition === item ? '' : item)}
-                />
-              ))}
-            </View>
 
             <Pressable
               accessibilityRole="button"

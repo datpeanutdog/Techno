@@ -52,6 +52,15 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
     Route::post('/fetch/requests', [FetchRequestController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('fetch.requests.store');
+    Route::post('/fetch/requests/{fetchRequest}/accept', [FetchRequestController::class, 'accept'])
+        ->middleware('throttle:10,1')
+        ->name('fetch.requests.accept');
+    Route::post('/fetch/requests/{fetchRequest}/delivered', [FetchRequestController::class, 'delivered'])
+        ->middleware('throttle:10,1')
+        ->name('fetch.requests.delivered');
+    Route::post('/fetch/requests/{fetchRequest}/confirm', [FetchRequestController::class, 'confirm'])
+        ->middleware('throttle:10,1')
+        ->name('fetch.requests.confirm');
     Route::get('/fetch/updates', [FetchRequestController::class, 'updates'])
         ->middleware('throttle:30,1')
         ->name('fetch.requests.updates');

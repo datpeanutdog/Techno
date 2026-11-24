@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { COLORS, CATEGORY_ICONS, formatListedTime, getConditionTone, styles } from '../../App';
+import { COLORS, formatListedTime, getConditionTone, styles } from '../../App';
 import {
   clearAuthToken,
   getAuthToken,
@@ -20,6 +20,7 @@ import {
   UserProfile,
 } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
+import { BookmarkIcon } from '../../src/components/BookmarkIcon';
 import { useAppTheme } from '../../src/lib/theme';
 
 export default function ListingDetailScreen() {
@@ -115,19 +116,23 @@ export default function ListingDetailScreen() {
         </View>
       ) : listing ? (
         <ScrollView contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
-          {listing.image_url ? (
-            <Image source={{ uri: listing.image_url }} style={styles.detailImage} />
-          ) : (
-            <View style={[styles.detailImage, styles.imagePlaceholder]}>
-              <Text style={styles.placeholderIcon}>{CATEGORY_ICONS[listing.category] ?? '✦'}</Text>
+          <View style={styles.detailImageWrap}>
+            {listing.image_url ? (
+              <Image source={{ uri: listing.image_url }} style={styles.detailImage} />
+            ) : (
+              <View style={[styles.detailImage, styles.imagePlaceholder]}>
+                <Text style={styles.placeholderText}>No photo</Text>
+              </View>
+            )}
+            <View style={[styles.typeBadge, listing.type === 'rent' && styles.rentBadge]}>
+              <Text style={[styles.typeBadgeText, listing.type === 'rent' && styles.rentBadgeText]}>
+                {listing.type === 'rent' ? 'FOR RENT' : 'FOR SALE'}
+              </Text>
             </View>
-          )}
+          </View>
           <View style={styles.detailPanel}>
             <View style={styles.detailTopline}>
               <Text style={styles.detailCategory}>{listing.category.toUpperCase()}</Text>
-              <Text style={[styles.typeBadgeText, listing.type === 'rent' && styles.detailRentLabel]}>
-                {listing.type === 'rent' ? 'FOR RENT' : 'FOR SALE'}
-              </Text>
             </View>
             <Text style={styles.detailTitle}>{listing.title}</Text>
             <Text style={styles.detailPrice}>
@@ -136,7 +141,7 @@ export default function ListingDetailScreen() {
                 <Text style={styles.pricePeriod}> / {listing.rent_period}</Text>
               ) : null}
             </Text>
-            <Text style={styles.detailLocation}>⌖  {listing.location}</Text>
+            <Text style={styles.detailLocation}>{listing.location}</Text>
             <Text style={styles.detailListedTime}>{formatListedTime(listing.created_at)}</Text>
             <View style={styles.divider} />
             <Text style={styles.detailHeading}>A little more about it</Text>
@@ -166,11 +171,12 @@ export default function ListingDetailScreen() {
               </View>
               <Pressable
                 accessibilityLabel={savedIds.includes(listing.id) ? 'Remove saved item' : 'Save item'}
+                accessibilityRole="button"
+                accessibilityState={{ selected: savedIds.includes(listing.id) }}
                 onPress={() => void toggleFavorite()}
+                style={styles.detailBookmarkButton}
               >
-                <Text style={[styles.detailHeart, savedIds.includes(listing.id) && styles.favoriteIconSaved]}>
-                  {savedIds.includes(listing.id) ? '♥' : '♡'}
-                </Text>
+                <BookmarkIcon saved={savedIds.includes(listing.id)} />
               </Pressable>
             </View>
             {listing.user ? (
@@ -187,12 +193,28 @@ export default function ListingDetailScreen() {
             {listing.user?.bio ? <Text style={styles.detailDescription}>{listing.user.bio}</Text> : null}
             {error ? <Text style={styles.formError}>{error}</Text> : null}
             <View style={styles.safetyNote}>
-              <Text style={styles.safetyIcon}>✦</Text>
               <Text style={styles.safetyText}>
                 Meet in a public campus spot, check the item, and agree on the details before paying or borrowing.
               </Text>
             </View>
-            {listing.user && listing.user.id !== currentUserId ? (
+            {listing.user?.id === currentUserId ? (
+              <View style={styles.detailActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push({ pathname: '/sell', params: { editId: String(listing.id) } })}
+                  style={styles.primaryButton}
+                >
+                  <Text style={styles.primaryButtonText}>Edit listing</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push({ pathname: '/account', params: { section: 'listings' } })}
+                  style={[styles.primaryButton, styles.secondaryAction]}
+                >
+                  <Text style={[styles.primaryButtonText, styles.secondaryActionText]}>Manage my listings</Text>
+                </Pressable>
+              </View>
+            ) : listing.user && listing.user.id !== currentUserId ? (
               <>
                 <Pressable
                   accessibilityRole="button"
@@ -219,6 +241,13 @@ export default function ListingDetailScreen() {
                 </Pressable>
               </>
             ) : null}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.replace('/')}
+              style={styles.detailBrowseButton}
+            >
+              <Text style={styles.detailBrowseText}>Keep browsing  →</Text>
+            </Pressable>
           </View>
         </ScrollView>
       ) : null}

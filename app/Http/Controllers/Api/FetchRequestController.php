@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\FetchRequestWorkflow;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreFetchRequestRequest;
 use App\Models\FetchRequest as CampusFetchRequest;
-use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,56 +19,96 @@ class FetchRequestController extends Controller
             ->latest('id')
             ->limit(30)
             ->get()
-            ->map(fn (CampusFetchRequest $fetchRequest): array => $this->payload($fetchRequest));
+            ->map(fn (CampusFetchRequest $fetchRequest): array => $this->payload($fetchRequest, auth()->id()));
 
         return response()->json(['data' => $requests]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function mine(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'item_name' => ['required', 'string', 'max:90'],
-            'details' => ['required', 'string', 'max:1000'],
-            'budget' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
-            'delivery_location' => ['required', 'string', 'max:100'],
-            'duration_value' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:1440',
-                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
-                    $multipliers = ['minutes' => 1, 'hours' => 60, 'days' => 1440];
-                    $unit = $request->input('duration_unit');
+        $user = $request->user();
+        $accepted = $user->acceptedFetchRequests()
+            ->with(['user:id,name', 'acceptedBy:id,name'])
+            ->latest('accepted_at')
+            ->limit(10)
+            ->get()
+            ->map(fn (CampusFetchRequest $fetchRequest): array => $this->payload($fetchRequest, $user->getKey()));
+        $posted = $user->fetchRequests()
+            ->with(['user:id,name', 'acceptedBy:id,name'])
+            ->whereIn('status', [
+                CampusFetchRequest::STATUS_ACCEPTED,
+                CampusFetchRequest::STATUS_DELIVERED,
+                CampusFetchRequest::STATUS_COMPLETED,
+            ])
+            ->latest('id')
+            ->limit(10)
+            ->get()
+            ->map(fn (CampusFetchRequest $fetchRequest): array => $this->payload($fetchRequest, $user->getKey()));
 
-                    if (is_string($unit) && isset($multipliers[$unit])) {
-                        $minutes = (int) $value * $multipliers[$unit];
-                        if ($minutes < 5 || $minutes > 1440) {
-                            $fail('Choose a duration between 5 minutes and 1 day.');
-                        }
-                    }
-                },
+        return response()->json([
+            'data' => [
+                'accepted' => $accepted,
+                'posted' => $posted,
             ],
-            'duration_unit' => ['required', 'string', 'in:minutes,hours,days'],
         ]);
-        $durationInMinutes = (int) $data['duration_value'] * match ($data['duration_unit']) {
-            'minutes' => 1,
-            'hours' => 60,
-            'days' => 1440,
-        };
+    }
 
+    public function store(StoreFetchRequestRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+        $deadlines = $request->deadlineAttributes();
         $fetchRequest = $request->user()->fetchRequests()->create([
             'item_name' => $data['item_name'],
             'details' => $data['details'],
             'budget' => $data['budget'] ?? null,
             'delivery_location' => $data['delivery_location'],
-            'expires_at' => now()->addMinutes($durationInMinutes),
+            ...$deadlines,
         ]);
         $fetchRequest->load('user:id,name');
 
         return response()->json([
-            'data' => $this->payload($fetchRequest),
+            'data' => $this->payload($fetchRequest, $request->user()->getKey()),
             'message' => 'Your fetch request is live.',
         ], 201);
+    }
+
+    public function accept(
+        Request $request,
+        CampusFetchRequest $fetchRequest,
+        FetchRequestWorkflow $workflow,
+    ): JsonResponse {
+        $fetchRequest = $workflow->accept($fetchRequest, $request->user());
+
+        return response()->json([
+            'data' => $this->payload($fetchRequest, $request->user()->getKey()),
+            'message' => 'You accepted this fetch request.',
+        ]);
+    }
+
+    public function delivered(
+        Request $request,
+        CampusFetchRequest $fetchRequest,
+        FetchRequestWorkflow $workflow,
+    ): JsonResponse {
+        $fetchRequest = $workflow->reportDelivery($fetchRequest, $request->user());
+
+        return response()->json([
+            'data' => $this->payload($fetchRequest, $request->user()->getKey()),
+            'message' => 'Delivery reported. The requester will confirm it.',
+        ]);
+    }
+
+    public function confirm(
+        Request $request,
+        CampusFetchRequest $fetchRequest,
+        FetchRequestWorkflow $workflow,
+    ): JsonResponse {
+        $fetchRequest = $workflow->confirmDelivery($fetchRequest, $request->user());
+
+        return response()->json([
+            'data' => $this->payload($fetchRequest, $request->user()->getKey()),
+            'message' => 'Delivery confirmed.',
+        ]);
     }
 
     public function updates(Request $request): JsonResponse
@@ -80,17 +121,25 @@ class FetchRequestController extends Controller
             ->oldest('id')
             ->limit(50)
             ->get()
-            ->map(fn (CampusFetchRequest $fetchRequest): array => $this->payload($fetchRequest));
+            ->map(fn (CampusFetchRequest $fetchRequest): array => $this->payload($fetchRequest, $request->user()->getKey()));
 
-        return response()->json(['data' => $requests]);
+        return response()->json([
+            'data' => $requests,
+            'available_ids' => CampusFetchRequest::query()
+                ->live()
+                ->latest('id')
+                ->limit(30)
+                ->pluck('id'),
+        ]);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function payload(CampusFetchRequest $fetchRequest): array
+    private function payload(CampusFetchRequest $fetchRequest, ?int $viewerId = null): array
     {
         $expiresAt = $fetchRequest->effectiveExpiresAt();
+        $deliveryDeadline = $fetchRequest->effectiveDeliveryDeadline();
 
         return [
             'id' => $fetchRequest->id,
@@ -98,9 +147,25 @@ class FetchRequestController extends Controller
             'details' => $fetchRequest->details,
             'budget' => $fetchRequest->budget,
             'delivery_location' => $fetchRequest->delivery_location,
+            'created_at' => $fetchRequest->created_at->toIso8601String(),
             'expires_at' => $expiresAt->toIso8601String(),
             'expires_at_display' => $expiresAt->format('M j, g:i A'),
-            'requester' => ['name' => $fetchRequest->user->name],
+            'delivery_deadline' => $deliveryDeadline->toIso8601String(),
+            'delivery_deadline_display' => $deliveryDeadline->format('M j, g:i A'),
+            'status' => $fetchRequest->status,
+            'can_accept' => $fetchRequest->status === CampusFetchRequest::STATUS_OPEN
+                && (int) $fetchRequest->user_id !== (int) $viewerId
+                && $expiresAt->isFuture(),
+            'accepted_at' => $fetchRequest->accepted_at?->toIso8601String(),
+            'delivered_at' => $fetchRequest->delivered_at?->toIso8601String(),
+            'confirmed_at' => $fetchRequest->confirmed_at?->toIso8601String(),
+            'requester' => [
+                'id' => $fetchRequest->user->getKey(),
+                'name' => $fetchRequest->user->name,
+            ],
+            'accepted_by' => $fetchRequest->acceptedBy
+                ? ['id' => $fetchRequest->acceptedBy->getKey(), 'name' => $fetchRequest->acceptedBy->name]
+                : null,
         ];
     }
 }

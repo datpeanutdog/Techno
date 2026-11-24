@@ -192,7 +192,6 @@ export default function MessagesScreen() {
               </Pressable>
             )) : (
               <View style={appStyles.emptyState}>
-                <Text style={appStyles.emptyIcon}>✉</Text>
                 <Text style={appStyles.emptyTitle}>No conversations yet.</Text>
                 <Text style={appStyles.emptyDescription}>
                   Open a school find and message its seller to talk through the details privately.

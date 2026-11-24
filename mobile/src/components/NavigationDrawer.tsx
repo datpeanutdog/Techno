@@ -1,4 +1,4 @@
-import { router, usePathname } from 'expo-router';
+import { router, useLocalSearchParams, usePathname } from 'expo-router';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -72,6 +72,11 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
   const [error, setError] = useState('');
   const previousUnreadCounts = useRef<Record<number, number> | null>(null);
   const pathname = usePathname();
+  const params = useLocalSearchParams<{ mode?: string; view?: string; section?: string }>();
+  const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+  const view = Array.isArray(params.view) ? params.view[0] : params.view;
+  const section = Array.isArray(params.section) ? params.section[0] : params.section;
+  const isMarketplace = pathname === '/';
 
   const refreshUnreadCount = useCallback(async (showNewMessageAlert: boolean) => {
     if (!await getAuthToken()) {
@@ -170,10 +175,14 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
     setVisible(false);
   }, []);
 
-  const navigate = useCallback((path: '/account' | '/messages' | '/sell' | '/support' | '/settings' | '/contact-support' | '/fetch' | '/admin' | '/', mode?: 'rent' | 'sale' | 'saved') => {
+  const navigate = useCallback((path: '/account' | '/messages' | '/sell' | '/support' | '/settings' | '/contact-support' | '/fetch' | '/admin' | '/', mode?: 'rent' | 'sale' | 'saved', section?: 'profile' | 'listings') => {
     closeDrawer();
     if (path === '/admin') {
-      router.push('/admin/index');
+      router.push('/admin');
+      return;
+    }
+    if (path === '/account' && section) {
+      router.push({ pathname: '/account', params: { section } });
       return;
     }
     if (path === '/' && mode) {
@@ -233,7 +242,7 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
             <ScrollView contentContainerStyle={drawerStyles.content} showsVerticalScrollIndicator={false}>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => navigate('/account')}
+                onPress={() => navigate('/account', undefined, 'profile')}
                 style={({ pressed }) => [drawerStyles.profileHeader, pressed && drawerStyles.pressed]}
               >
                 {loadingProfile ? (
@@ -245,7 +254,7 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
                 ) : (
                   <View style={drawerStyles.avatarPlaceholder}>
                     <Text style={drawerStyles.avatarInitial}>
-                      {profile?.name.slice(0, 1).toUpperCase() ?? '☺'}
+                      {profile?.name.slice(0, 1).toUpperCase() ?? 'P'}
                     </Text>
                   </View>
                 )}
@@ -253,35 +262,59 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
                   <Text style={drawerStyles.profileName} numberOfLines={1}>
                     {profile?.name ?? 'Your profile'}
                   </Text>
-                  <Text style={drawerStyles.profileAction}>
-                    Customize your profile  ›
-                  </Text>
+                  <Text style={drawerStyles.profileAction}>View profile</Text>
                 </View>
-                <Text style={drawerStyles.profileArrow}>›</Text>
               </Pressable>
 
-              <Text style={drawerStyles.sectionLabel}>Your Pasabuy</Text>
-              <DrawerLink icon="⌕" label="Browse marketplace" onPress={() => navigate('/', 'sale')} />
-              <DrawerLink icon="↗" label="Browse rentals" onPress={() => navigate('/', 'rent')} />
-              <DrawerLink icon="♡" label="Saved finds" onPress={() => navigate('/', 'saved')} />
-              <DrawerLink icon="＋" label="List an item" onPress={() => navigate('/sell')} />
-              <DrawerLink icon="⌖" label="Fetch request board" onPress={() => navigate('/fetch')} />
-              <DrawerLink icon="⚙" label="Settings" onPress={() => navigate('/settings')} />
-              <DrawerLink
-                badge={unreadCount}
-                icon="✉"
-                label="Message inbox"
-                onPress={() => navigate('/messages')}
-              />
-              <DrawerLink
-                icon="?"
-                label="Report an account"
-                onPress={() => navigate('/support')}
-              />
-              <DrawerLink icon="✉" label="Contact support" onPress={() => navigate('/contact-support')} />
-              {profile?.role === 'admin' ? (
-                <DrawerLink icon="⚙" label="Admin tools" onPress={() => navigate('/admin')} />
-              ) : null}
+              <View style={drawerStyles.navSection}>
+                <Text style={drawerStyles.sectionLabel}>Explore</Text>
+                <DrawerLink
+                  active={isMarketplace && view !== 'saved' && mode !== 'rent'}
+                  label="Browse marketplace"
+                  onPress={() => navigate('/', 'sale')}
+                />
+                <DrawerLink
+                  active={isMarketplace && view !== 'saved' && mode === 'rent'}
+                  label="Browse rentals"
+                  onPress={() => navigate('/', 'rent')}
+                />
+                <DrawerLink
+                  active={isMarketplace && view === 'saved'}
+                  label="Saved finds"
+                  onPress={() => navigate('/', 'saved')}
+                />
+                <DrawerLink
+                  active={pathname === '/fetch' || pathname === '/fetch-create'}
+                  label="Fetch request board"
+                  onPress={() => navigate('/fetch')}
+                />
+              </View>
+
+              <View style={drawerStyles.navSection}>
+                <Text style={drawerStyles.sectionLabel}>Your account</Text>
+                <DrawerLink
+                  active={pathname === '/account' && section === 'listings'}
+                  label="Manage listings"
+                  onPress={() => navigate('/account', undefined, 'listings')}
+                />
+                <DrawerLink active={pathname === '/sell'} label="List an item" onPress={() => navigate('/sell')} />
+                <DrawerLink
+                  active={pathname.startsWith('/messages')}
+                  badge={unreadCount}
+                  label="Message inbox"
+                  onPress={() => navigate('/messages')}
+                />
+                <DrawerLink active={pathname === '/settings'} label="Settings" onPress={() => navigate('/settings')} />
+              </View>
+
+              <View style={drawerStyles.navSection}>
+                <Text style={drawerStyles.sectionLabel}>Help</Text>
+                <DrawerLink active={pathname === '/support'} label="Report an account" onPress={() => navigate('/support')} />
+                <DrawerLink active={pathname === '/contact-support'} label="Contact support" onPress={() => navigate('/contact-support')} />
+                {profile?.role === 'admin' ? (
+                  <DrawerLink active={pathname.startsWith('/admin')} label="Admin tools" onPress={() => navigate('/admin')} />
+                ) : null}
+              </View>
 
               {error ? <Text style={drawerStyles.error}>{error}</Text> : null}
             </ScrollView>
@@ -300,10 +333,7 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
                 {loggingOut ? (
                   <ActivityIndicator color={COLORS.navy} />
                 ) : (
-                  <>
-                    <Text style={drawerStyles.logoutIcon}>⇥</Text>
-                    <Text style={drawerStyles.logoutText}>Log out</Text>
-                  </>
+                  <Text style={drawerStyles.logoutText}>Log out</Text>
                 )}
               </Pressable>
             </View>
@@ -315,30 +345,33 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
 }
 
 function DrawerLink({
+  active = false,
   badge,
-  icon,
   label,
   onPress,
 }: {
+  active?: boolean;
   badge?: number;
-  icon: string;
   label: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       onPress={onPress}
-      style={({ pressed }) => [drawerStyles.link, pressed && drawerStyles.pressed]}
+      style={({ pressed }) => [
+        drawerStyles.link,
+        active && drawerStyles.linkActive,
+        pressed && drawerStyles.pressed,
+      ]}
     >
-      <Text style={drawerStyles.linkIcon}>{icon}</Text>
-      <Text style={drawerStyles.linkLabel}>{label}</Text>
+      <Text style={[drawerStyles.linkLabel, active && drawerStyles.linkLabelActive]}>{label}</Text>
       {badge ? (
         <View style={drawerStyles.badge}>
           <Text style={drawerStyles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
         </View>
       ) : null}
-      <Text style={drawerStyles.linkArrow}>›</Text>
     </Pressable>
   );
 }
@@ -363,7 +396,7 @@ const drawerStyles = createThemedStyles({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 28,
+    marginBottom: 20,
     padding: 14,
     borderRadius: 16,
     backgroundColor: COLORS.navyDeep,
@@ -383,26 +416,26 @@ const drawerStyles = createThemedStyles({
   profileCopy: { flex: 1, minWidth: 0 },
   profileName: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
   profileAction: { marginTop: 4, color: '#e5d6c8', fontSize: 11 },
-  profileArrow: { color: COLORS.gold, fontSize: 24 },
+  navSection: { marginBottom: 12 },
   sectionLabel: {
-    marginBottom: 11,
+    marginBottom: 7,
+    marginLeft: 10,
     color: COLORS.muted,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.2,
   },
   link: {
-    minHeight: 52,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
-    marginBottom: 5,
-    paddingHorizontal: 13,
-    borderRadius: 12,
+    marginBottom: 3,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
-  linkIcon: { width: 25, color: COLORS.navy, fontSize: 20, textAlign: 'center' },
+  linkActive: { backgroundColor: COLORS.paleGold },
   linkLabel: { flex: 1, color: COLORS.ink, fontSize: 14, fontWeight: '600' },
-  linkArrow: { color: COLORS.muted, fontSize: 22 },
+  linkLabelActive: { color: COLORS.navy, fontWeight: '700' },
   badge: {
     minWidth: 22,
     height: 22,
@@ -426,7 +459,6 @@ const drawerStyles = createThemedStyles({
     borderRadius: 12,
     backgroundColor: COLORS.white,
   },
-  logoutIcon: { color: COLORS.navy, fontSize: 18 },
   logoutText: { color: COLORS.navy, fontSize: 14, fontWeight: '700' },
   menuButton: {
     position: 'relative',

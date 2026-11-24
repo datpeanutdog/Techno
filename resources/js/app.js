@@ -358,16 +358,16 @@ if (liveThread) {
     });
 }
 
-const fetchDuration = document.querySelector('[data-fetch-duration]');
-
-if (fetchDuration) {
-    const durationInput = fetchDuration.querySelector('input[name="duration_value"]');
-    const durationUnit = fetchDuration.querySelector('select[name="duration_unit"]');
-    const durationHelp = document.querySelector('[data-fetch-duration-help]');
+document.querySelectorAll('[data-fetch-duration]').forEach((fetchDuration) => {
+    const durationInput = fetchDuration.querySelector('input[type="number"]');
+    const durationUnit = fetchDuration.querySelector('select');
+    const durationHelp = document.getElementById(durationInput.getAttribute('aria-describedby'));
+    const isDeliveryDeadline = fetchDuration.dataset.fetchDuration === 'delivery';
+    const maximumDays = isDeliveryDeadline ? 30 : 1;
     const durationBounds = {
-        minutes: { min: 5, max: 1440 },
-        hours: { min: 1, max: 24 },
-        days: { min: 1, max: 1 },
+        minutes: { min: 5, max: maximumDays * 1440 },
+        hours: { min: 1, max: maximumDays * 24 },
+        days: { min: 1, max: maximumDays },
     };
 
     const updateDurationBounds = () => {
@@ -376,14 +376,40 @@ if (fetchDuration) {
 
         durationInput.min = String(bounds.min);
         durationInput.max = String(bounds.max);
-        durationHelp.textContent = durationUnit.value === 'days'
-            ? 'Choose 1 day. Minimum request length: 5 minutes.'
-            : `Choose ${bounds.min} to ${bounds.max} ${unitLabel}. Minimum: 5 minutes. Maximum: 1 day.`;
+        durationHelp.textContent = isDeliveryDeadline
+            ? `Choose ${bounds.min} to ${bounds.max} ${unitLabel}, later than the live listing expiration. Maximum: 30 days.`
+            : durationUnit.value === 'days'
+                ? 'Choose 1 day. Minimum request length: 5 minutes.'
+                : `Choose ${bounds.min} to ${bounds.max} ${unitLabel}. Minimum: 5 minutes. Maximum: 1 day.`;
     };
 
     durationUnit.addEventListener('change', updateDurationBounds);
     updateDurationBounds();
-}
+});
+
+document.querySelectorAll('[data-fetch-active-job]').forEach((job) => {
+    const deadline = Date.parse(job.dataset.deliveryDeadline);
+    if (!Number.isFinite(deadline)) return;
+
+    const markDeadlinePassed = () => {
+        if (Date.now() <= deadline) return;
+
+        job.querySelector('[data-fetch-deliver-button]')?.closest('form')?.remove();
+
+        const status = job.querySelector('[data-fetch-job-status]');
+        if (status) status.textContent = 'Deadline passed';
+
+        if (!job.querySelector('[data-fetch-deadline-warning]')) {
+            const warning = document.createElement('p');
+            warning.classList.add('fetch-deadline-warning');
+            warning.textContent = 'The delivery deadline passed. This request cannot be marked delivered.';
+            warning.dataset.fetchDeadlineWarning = '';
+            job.append(warning);
+        }
+    };
+
+    window.setTimeout(markDeadlinePassed, Math.max(deadline - Date.now(), 0));
+});
 
 const fetchFeed = document.querySelector('[data-fetch-feed]');
 
@@ -406,6 +432,47 @@ if (fetchFeed) {
 
         return element;
     };
+
+    const createAcceptForm = (fetchRequestId) => {
+        const form = document.createElement('form');
+        form.classList.add('fetch-action-form');
+        form.method = 'POST';
+        form.action = `${fetchFeed.dataset.acceptUrlPrefix}/${fetchRequestId}/accept`;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (csrfToken) {
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '_token';
+            tokenInput.value = csrfToken;
+            form.append(tokenInput);
+        }
+
+        const acceptButton = document.createElement('button');
+        acceptButton.classList.add('button', 'button-navy');
+        acceptButton.name = 'accept';
+        acceptButton.type = 'submit';
+        acceptButton.textContent = 'Accept this request';
+        form.append(acceptButton);
+
+        return form;
+    };
+
+    const formatFetchTime = (timeElement) => {
+        const date = new Date(timeElement.dateTime);
+
+        if (!Number.isFinite(date.getTime())) return;
+
+        const displayTime = new Intl.DateTimeFormat(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+        }).format(date);
+        timeElement.textContent = `${timeElement.dataset.fetchTimeLabel} ${displayTime}`;
+    };
+
+    requestList.querySelectorAll('time[data-fetch-time-label]').forEach(formatFetchTime);
 
     const showEmptyState = () => {
         if (requestList.querySelector('[data-fetch-request-id]') || requestList.querySelector('[data-fetch-empty]')) return;
@@ -432,6 +499,20 @@ if (fetchFeed) {
 
         showEmptyState();
     };
+
+    const scheduleFetchRequestExpiry = (request) => {
+        const expiresAt = Date.parse(request.dataset.expiresAt);
+
+        if (!Number.isFinite(expiresAt)) return;
+
+        window.setTimeout(() => {
+            requestIds.delete(request.dataset.fetchRequestId);
+            request.remove();
+            showEmptyState();
+        }, Math.max(expiresAt - Date.now(), 0));
+    };
+
+    requestList.querySelectorAll('[data-fetch-request-id]').forEach(scheduleFetchRequestExpiry);
 
     const addFetchRequest = (fetchRequest) => {
         const requestId = String(fetchRequest.id);
@@ -461,14 +542,30 @@ if (fetchFeed) {
         meta.classList.add('fetch-request-meta');
         const delivery = document.createElement('span');
         delivery.append('Deliver to ', createTextElement('strong', 'fetch-delivery-location', fetchRequest.delivery_location));
-        const expiresAt = createTextElement('time', 'fetch-expiry', `Expires ${fetchRequest.expires_at_display}`);
+        const postedAt = createTextElement('time', 'fetch-posted', '');
+        postedAt.dateTime = fetchRequest.created_at;
+        postedAt.dataset.fetchTimeLabel = 'Posted';
+        formatFetchTime(postedAt);
+        const expiresAt = createTextElement('time', 'fetch-expiry', '');
         expiresAt.dateTime = fetchRequest.expires_at;
-        meta.append(delivery, expiresAt);
+        expiresAt.dataset.fetchTimeLabel = 'Expires';
+        formatFetchTime(expiresAt);
+        const deliveryDeadline = createTextElement('time', 'fetch-expiry', '');
+        deliveryDeadline.dateTime = fetchRequest.delivery_deadline;
+        deliveryDeadline.dataset.fetchTimeLabel = 'Deliver by';
+        formatFetchTime(deliveryDeadline);
+        meta.append(delivery, postedAt, expiresAt, deliveryDeadline);
 
         article.append(heading, details, meta);
+        if (fetchRequest.can_accept) {
+            article.append(createAcceptForm(requestId));
+        } else {
+            article.append(createTextElement('p', 'fetch-own-request-label', 'This is your request.'));
+        }
         requestList.querySelector('[data-fetch-empty]')?.remove();
         requestList.prepend(article);
         requestIds.add(requestId);
+        scheduleFetchRequestExpiry(article);
         lastId = requestId;
 
         while (requestList.children.length > 30) {
@@ -499,7 +596,18 @@ if (fetchFeed) {
                 throw new Error('Fetch request update response did not contain a request list.');
             }
 
+            if (Array.isArray(payload.available_ids)) {
+                const availableIds = new Set(payload.available_ids.map(String));
+                requestList.querySelectorAll('[data-fetch-request-id]').forEach((request) => {
+                    if (availableIds.has(request.dataset.fetchRequestId)) return;
+
+                    requestIds.delete(request.dataset.fetchRequestId);
+                    request.remove();
+                });
+            }
+
             payload.data.forEach(addFetchRequest);
+            showEmptyState();
             if (fetchStatus) fetchStatus.textContent = 'Live updates are on.';
         } catch (error) {
             if (fetchStatus) fetchStatus.textContent = 'Connection interrupted. Retrying for new requests…';

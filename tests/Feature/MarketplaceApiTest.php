@@ -114,6 +114,40 @@ class MarketplaceApiTest extends TestCase
         $this->assertDatabaseCount('saved_listings', 0);
     }
 
+    public function test_api_saved_listing_view_includes_both_modes_and_paginates_eight_at_a_time(): void
+    {
+        $user = User::factory()->create();
+        $savedListings = collect(range(1, 9))->map(function (int $number): Listing {
+            return Listing::create([
+                'title' => 'Saved listing '.$number,
+                'slug' => 'saved-listing-'.$number,
+                'description' => 'A school listing saved for later.',
+                'price' => 80 + $number,
+                'type' => $number % 2 === 0 ? 'rent' : 'sale',
+                'rent_period' => $number % 2 === 0 ? 'day' : null,
+                'category' => 'School Supplies',
+                'location' => 'Campus',
+                'seller_name' => 'Seller',
+                'seller_initials' => 'SE',
+            ]);
+        });
+        $user->savedListings()->sync($savedListings->pluck('id')->all());
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/listings?view=saved')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 9)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonCount(8, 'data')
+            ->assertJsonFragment(['type' => 'sale'])
+            ->assertJsonFragment(['type' => 'rent']);
+
+        $this->getJson('/api/listings?view=saved&page=2')
+            ->assertOk()
+            ->assertJsonPath('meta.current_page', 2)
+            ->assertJsonCount(1, 'data');
+    }
+
     public function test_api_seller_profiles_and_reviews_are_private_and_can_be_updated(): void
     {
         $seller = User::factory()->create(['email' => 'seller@example.test']);

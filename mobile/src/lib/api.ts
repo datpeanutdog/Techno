@@ -67,9 +67,23 @@ export type FetchRequest = {
   details: string;
   budget: string | number | null;
   delivery_location: string;
+  created_at: string;
   expires_at: string;
   expires_at_display: string;
-  requester: { name: string };
+  delivery_deadline: string;
+  delivery_deadline_display: string;
+  status: 'open' | 'accepted' | 'delivered' | 'completed';
+  can_accept: boolean;
+  accepted_at: string | null;
+  delivered_at: string | null;
+  confirmed_at: string | null;
+  requester: { id: number; name: string };
+  accepted_by: { id: number; name: string } | null;
+};
+
+export type FetchDashboard = {
+  accepted: FetchRequest[];
+  posted: FetchRequest[];
 };
 
 export type ConversationThread = Conversation & {
@@ -87,6 +101,7 @@ type ApiResponse<T> = {
     last_page: number;
     total: number;
   };
+  available_ids?: (number | string)[];
 };
 
 export class ApiError extends Error {

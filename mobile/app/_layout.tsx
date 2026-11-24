@@ -92,6 +92,7 @@ function RootLayoutContent() {
           <Stack.Screen name="settings" />
           <Stack.Screen name="contact-support" />
           <Stack.Screen name="fetch" />
+          <Stack.Screen name="fetch-create" />
           <Stack.Screen name="suspension" />
           <Stack.Screen name="reset-password" />
           <Stack.Screen name="admin/index" />

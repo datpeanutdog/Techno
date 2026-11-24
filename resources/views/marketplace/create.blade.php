@@ -4,7 +4,6 @@
 
 @section('content')
     <div class="create-shell">
-        <a class="back-link" href="{{ route('marketplace.index') }}">← Back to the marketplace</a>
         <div class="create-layout">
             <form class="listing-form" method="POST" enctype="multipart/form-data" action="{{ isset($listing) ? route('my-listings.update', $listing) : route('listings.store') }}">
                 @csrf

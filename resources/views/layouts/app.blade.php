@@ -56,49 +56,61 @@
                         @else
                             <span class="sidebar-profile-avatar sidebar-profile-initial" aria-hidden="true">{{ Illuminate\Support\Str::upper(Illuminate\Support\Str::substr(auth()->user()->name, 0, 1)) }}</span>
                         @endif
-                        <span class="sidebar-profile-name">{{ auth()->user()->name }}</span>
+                        <span class="sidebar-profile-copy">
+                            <span class="sidebar-profile-name">{{ auth()->user()->name }}</span>
+                            <span class="sidebar-profile-action">View profile</span>
+                        </span>
                     </a>
                 @endauth
 
                 <nav class="main-nav" aria-label="Main navigation">
                     <a class="{{ request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') !== 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'sale']) }}#discover" @if (request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') !== 'rent') aria-current="page" @endif>
-                        <span>Buy</span>
+                        <span>Browse marketplace</span>
                     </a>
                     <a class="{{ request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'rent']) }}#discover" @if (request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent') aria-current="page" @endif>
-                        <span>Rent</span>
-                    </a>
-                    <a class="{{ request()->routeIs('fetch.*') ? 'is-active' : '' }}" href="{{ route('fetch.index') }}" @if (request()->routeIs('fetch.*')) aria-current="page" @endif>
-                        <span>Fetch</span>
+                        <span>Browse rentals</span>
                     </a>
                     <a class="{{ request()->routeIs('marketplace.index') && request('view') === 'saved' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['view' => 'saved']) }}#discover" data-saved-link @if (request()->routeIs('marketplace.index') && request('view') === 'saved') aria-current="page" @endif>
-                        <span>Save for later</span>
+                        <span>Saved finds</span>
+                    </a>
+                    <a class="{{ request()->routeIs('fetch.*') ? 'is-active' : '' }}" href="{{ route('fetch.index') }}" @if (request()->routeIs('fetch.*')) aria-current="page" @endif>
+                        <span>Fetch request board</span>
                     </a>
                 </nav>
 
                 @auth
                     <p class="sidebar-section-label">Your account</p>
                     <nav class="account-nav" aria-label="Account navigation">
-                        <a href="{{ route('my-listings') }}" @if (request()->routeIs('my-listings')) aria-current="page" @endif>
-                            <span>Manage Listing</span>
+                        <a href="{{ route('my-listings') }}" @if (request()->routeIs('my-listings', 'my-listings.edit')) aria-current="page" @endif>
+                            <span>Manage listings</span>
+                        </a>
+                        <a href="{{ route('listings.create') }}" @if (request()->routeIs('listings.create')) aria-current="page" @endif>
+                            <span>List an item</span>
+                        </a>
+                        <a href="{{ route('conversations.index') }}" @if (request()->routeIs('conversations.*')) aria-current="page" @endif>
+                            <span>Message inbox</span>
                         </a>
                         <a href="{{ route('settings.index') }}" @if (request()->routeIs('settings.index')) aria-current="page" @endif>
                             <span>Settings</span>
                         </a>
-                        <a href="{{ route('conversations.index') }}" @if (request()->routeIs('conversations.*')) aria-current="page" @endif>
-                            <span>Messages</span>
+                    </nav>
+                    <p class="sidebar-section-label">Help</p>
+                    <nav class="account-nav" aria-label="Help navigation">
+                        <a href="{{ route('support.reports.create') }}" @if (request()->routeIs('support.reports.create')) aria-current="page" @endif>
+                            <span>Report an account</span>
                         </a>
-                        <a class="support-nav-link" href="{{ route('support.reports.index') }}" @if (request()->routeIs('support.reports.index')) aria-current="page" @endif>
-                            <span>Support</span>
+                        <a href="{{ route('support.reports.index') }}" @if (request()->routeIs('support.reports.index')) aria-current="page" @endif>
+                            <span>Contact support</span>
                         </a>
                         @if (auth()->user()->isAdmin())
                             <a href="{{ route('admin.support-reports.index') }}" @if (request()->routeIs('admin.support-reports.*')) aria-current="page" @endif>
-                                <span>Admin</span>
+                                <span>Admin tools</span>
                             </a>
                             <a href="{{ route('admin.users.index') }}" @if (request()->routeIs('admin.users.*')) aria-current="page" @endif>
-                                <span>Users</span>
+                                <span>Manage users</span>
                             </a>
                             <a href="{{ route('admin.suspension-appeals.index') }}" @if (request()->routeIs('admin.suspension-appeals.*')) aria-current="page" @endif>
-                                <span>Appeals</span>
+                                <span>Suspension appeals</span>
                             </a>
                         @endif
                     </nav>
@@ -144,7 +156,7 @@
                                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </button>
-                        @unless (request()->routeIs('marketplace.index', 'fetch.*', 'conversations.*', 'my-listings', 'profile.*', 'settings.*', 'support.reports.*'))
+                        @unless (request()->routeIs('marketplace.index', 'fetch.*', 'conversations.*', 'my-listings', 'my-listings.*', 'listings.create', 'profile.*', 'settings.*', 'support.reports.*'))
                             <a class="button button-navy header-sell" href="{{ route('listings.create') }}">
                                 <span aria-hidden="true">＋</span> List an item
                             </a>

@@ -61,6 +61,11 @@ class User extends Authenticatable
         return $this->hasMany(FetchRequest::class);
     }
 
+    public function acceptedFetchRequests(): HasMany
+    {
+        return $this->hasMany(FetchRequest::class, 'accepted_by_id');
+    }
+
     public function savedListings(): BelongsToMany
     {
         return $this->belongsToMany(Listing::class, 'saved_listings')->withTimestamps();

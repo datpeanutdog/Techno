@@ -54,7 +54,14 @@ Route::middleware(['auth:sanctum', 'account.active'])->group(function (): void {
     Route::post('/support/reports', [SupportReportController::class, 'store'])
         ->middleware('throttle:5,1');
     Route::get('/fetch/requests', [FetchRequestController::class, 'index']);
+    Route::get('/fetch/requests/mine', [FetchRequestController::class, 'mine']);
     Route::post('/fetch/requests', [FetchRequestController::class, 'store'])
+        ->middleware('throttle:10,1');
+    Route::post('/fetch/requests/{fetchRequest}/accept', [FetchRequestController::class, 'accept'])
+        ->middleware('throttle:10,1');
+    Route::post('/fetch/requests/{fetchRequest}/delivered', [FetchRequestController::class, 'delivered'])
+        ->middleware('throttle:10,1');
+    Route::post('/fetch/requests/{fetchRequest}/confirm', [FetchRequestController::class, 'confirm'])
         ->middleware('throttle:10,1');
     Route::get('/fetch/requests/updates', [FetchRequestController::class, 'updates'])
         ->middleware('throttle:30,1');

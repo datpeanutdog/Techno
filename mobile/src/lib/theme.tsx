@@ -44,6 +44,7 @@ const darkColorMap: Record<string, string> = {
   '#33251d80': '#00000099',
   '#3d6244': '#a7d7a8',
   '#3e3027': '#f1e8dd',
+  '#496d58': '#9bd5a5',
   '#4a382c': '#f0e5d8',
   '#705a3d': '#d2bda0',
   '#766b5f': '#b3a698',

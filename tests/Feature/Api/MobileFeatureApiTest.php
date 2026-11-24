@@ -7,6 +7,7 @@ use App\Models\SuspensionAppeal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
@@ -27,16 +28,21 @@ class MobileFeatureApiTest extends TestCase
                 'delivery_location' => 'Science building lobby',
                 'duration_value' => 30,
                 'duration_unit' => 'minutes',
+                'delivery_duration_value' => 2,
+                'delivery_duration_unit' => 'hours',
             ])
             ->assertCreated()
             ->assertJsonPath('data.item_name', 'A lab coat')
             ->assertJsonPath('data.requester.name', 'Taylor Park')
+            ->assertJsonStructure(['data' => ['created_at']])
+            ->assertJsonStructure(['data' => ['delivery_deadline']])
             ->assertJsonPath('message', 'Your fetch request is live.');
 
         $this->getJson('/api/fetch/requests')
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.item_name', 'A lab coat');
+            ->assertJsonPath('data.0.item_name', 'A lab coat')
+            ->assertJsonPath('data.0.can_accept', false);
 
         $this->getJson('/api/fetch/requests/updates?after=0')
             ->assertOk()
@@ -50,8 +56,21 @@ class MobileFeatureApiTest extends TestCase
                 'item_name' => 'A lab coat',
                 'details' => 'Needed for class.',
                 'delivery_location' => 'Science building',
+                'duration_value' => 30,
+                'duration_unit' => 'minutes',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['delivery_duration_value', 'delivery_duration_unit']);
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->postJson('/api/fetch/requests', [
+                'item_name' => 'A lab coat',
+                'details' => 'Needed for class.',
+                'delivery_location' => 'Science building',
                 'duration_value' => 4,
                 'duration_unit' => 'minutes',
+                'delivery_duration_value' => 2,
+                'delivery_duration_unit' => 'hours',
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('duration_value');
@@ -59,6 +78,102 @@ class MobileFeatureApiTest extends TestCase
         $this->assertDatabaseCount('fetch_requests', 0);
         $this->app['auth']->forgetGuards();
         $this->getJson('/api/fetch/requests')->assertUnauthorized();
+    }
+
+    public function test_only_the_assigned_runner_and_requester_can_advance_a_fetch_request(): void
+    {
+        $requester = User::factory()->create();
+        $runner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $fetchRequest = $requester->fetchRequests()->create([
+            'item_name' => 'Calculator',
+            'details' => 'A basic scientific calculator.',
+            'delivery_location' => 'Library entrance',
+            'expires_at' => now()->addMinutes(5),
+            'delivery_deadline' => now()->addHour(),
+        ]);
+
+        $this->actingAs($runner, 'sanctum')
+            ->getJson('/api/fetch/requests')
+            ->assertOk()
+            ->assertJsonPath('data.0.can_accept', true);
+
+        $this->actingAs($runner, 'sanctum')
+            ->postJson("/api/fetch/requests/{$fetchRequest->id}/accept")
+            ->assertOk();
+
+        $this->actingAs($otherUser, 'sanctum')
+            ->postJson("/api/fetch/requests/{$fetchRequest->id}/delivered")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('fetch_requests', [
+            'id' => $fetchRequest->id,
+            'status' => 'accepted',
+            'delivered_at' => null,
+        ]);
+
+        $this->actingAs($runner, 'sanctum')
+            ->postJson("/api/fetch/requests/{$fetchRequest->id}/delivered")
+            ->assertOk();
+
+        $this->actingAs($otherUser, 'sanctum')
+            ->postJson("/api/fetch/requests/{$fetchRequest->id}/confirm")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('fetch_requests', [
+            'id' => $fetchRequest->id,
+            'status' => 'delivered',
+            'confirmed_at' => null,
+        ]);
+    }
+
+    public function test_mobile_runner_can_accept_report_delivery_and_requester_can_confirm_later(): void
+    {
+        $this->travelTo(Carbon::create(2026, 1, 1, 12, 0, 0));
+        $requester = User::factory()->create();
+        $runner = User::factory()->create();
+        $fetchRequest = $requester->fetchRequests()->create([
+            'item_name' => 'Calculator',
+            'details' => 'A basic scientific calculator.',
+            'delivery_location' => 'Library entrance',
+            'expires_at' => now()->addMinutes(5),
+            'delivery_deadline' => now()->addHour(),
+        ]);
+
+        $this->actingAs($runner, 'sanctum')
+            ->postJson("/api/fetch/requests/{$fetchRequest->id}/accept")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'accepted')
+            ->assertJsonPath('data.accepted_by.name', $runner->name);
+
+        $this->getJson('/api/fetch/requests/mine')
+            ->assertOk()
+            ->assertJsonPath('data.accepted.0.id', $fetchRequest->id)
+            ->assertJsonPath('data.accepted.0.delivery_deadline', $fetchRequest->delivery_deadline->toIso8601String());
+        $this->getJson('/api/fetch/requests')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+        $this->getJson('/api/fetch/requests/updates?after=0')
+            ->assertOk()
+            ->assertJsonPath('available_ids', []);
+
+        $this->travelTo(Carbon::create(2026, 1, 1, 12, 59, 0));
+        $this->postJson("/api/fetch/requests/{$fetchRequest->id}/delivered")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'delivered');
+
+        $this->travelTo(Carbon::create(2026, 1, 1, 13, 30, 0));
+        $this->actingAs($requester, 'sanctum')
+            ->postJson("/api/fetch/requests/{$fetchRequest->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed');
+
+        $this->assertDatabaseHas('fetch_requests', [
+            'id' => $fetchRequest->id,
+            'status' => 'completed',
+            'delivered_at' => '2026-01-01 12:59:00',
+            'confirmed_at' => '2026-01-01 13:30:00',
+        ]);
     }
 
     public function test_guest_can_contact_support_and_password_reset_tokens_work_in_the_mobile_api(): void
