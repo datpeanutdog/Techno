@@ -62,6 +62,7 @@ class MarketplaceTest extends TestCase
                 'class="sidebar-profile-name"',
                 '>Buy</span>',
                 '>Rent</span>',
+                '>Fetch</span>',
                 '>Save for later</span>',
                 'Your account',
                 '>Manage Listing</span>',

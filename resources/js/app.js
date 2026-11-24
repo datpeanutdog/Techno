@@ -358,6 +358,179 @@ if (liveThread) {
     });
 }
 
+const fetchDuration = document.querySelector('[data-fetch-duration]');
+
+if (fetchDuration) {
+    const durationInput = fetchDuration.querySelector('input[name="duration_value"]');
+    const durationUnit = fetchDuration.querySelector('select[name="duration_unit"]');
+    const durationHelp = document.querySelector('[data-fetch-duration-help]');
+    const durationBounds = {
+        minutes: { min: 5, max: 1440 },
+        hours: { min: 1, max: 24 },
+        days: { min: 1, max: 1 },
+    };
+
+    const updateDurationBounds = () => {
+        const bounds = durationBounds[durationUnit.value] ?? durationBounds.minutes;
+        const unitLabel = durationUnit.value === 'days' ? 'day' : durationUnit.value;
+
+        durationInput.min = String(bounds.min);
+        durationInput.max = String(bounds.max);
+        durationHelp.textContent = durationUnit.value === 'days'
+            ? 'Choose 1 day. Minimum request length: 5 minutes.'
+            : `Choose ${bounds.min} to ${bounds.max} ${unitLabel}. Minimum: 5 minutes. Maximum: 1 day.`;
+    };
+
+    durationUnit.addEventListener('change', updateDurationBounds);
+    updateDurationBounds();
+}
+
+const fetchFeed = document.querySelector('[data-fetch-feed]');
+
+if (fetchFeed) {
+    const requestList = fetchFeed.querySelector('[data-fetch-requests]');
+    const fetchStatus = fetchFeed.querySelector('[data-fetch-status]');
+    const updatesUrl = new URL(fetchFeed.dataset.updatesUrl, window.location.href);
+    const requestIds = new Set(
+        Array.from(requestList.querySelectorAll('[data-fetch-request-id]'))
+            .map((request) => request.dataset.fetchRequestId),
+    );
+    let lastId = fetchFeed.dataset.lastId || '0';
+    let isCheckingForRequests = false;
+    let pollTimeout;
+
+    const createTextElement = (tagName, className, text) => {
+        const element = document.createElement(tagName);
+        element.classList.add(className);
+        element.textContent = text;
+
+        return element;
+    };
+
+    const showEmptyState = () => {
+        if (requestList.querySelector('[data-fetch-request-id]') || requestList.querySelector('[data-fetch-empty]')) return;
+
+        const emptyState = document.createElement('div');
+        emptyState.classList.add('empty-state', 'fetch-empty-state');
+        emptyState.dataset.fetchEmpty = '';
+        emptyState.append(
+            createTextElement('h2', 'fetch-empty-heading', 'No live requests at the moment.'),
+            createTextElement('p', 'fetch-empty-copy', 'Check back soon or post what you need.'),
+        );
+        requestList.append(emptyState);
+    };
+
+    const removeExpiredFetchRequests = () => {
+        requestList.querySelectorAll('[data-fetch-request-id]').forEach((request) => {
+            const expiresAt = Date.parse(request.dataset.expiresAt);
+
+            if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+                requestIds.delete(request.dataset.fetchRequestId);
+                request.remove();
+            }
+        });
+
+        showEmptyState();
+    };
+
+    const addFetchRequest = (fetchRequest) => {
+        const requestId = String(fetchRequest.id);
+
+        if (requestIds.has(requestId)) return;
+
+        const article = document.createElement('article');
+        article.classList.add('listing-card', 'fetch-request-card');
+        article.dataset.fetchRequestId = requestId;
+        article.dataset.expiresAt = fetchRequest.expires_at;
+
+        const heading = document.createElement('div');
+        heading.classList.add('fetch-request-heading');
+
+        const requesterInfo = document.createElement('div');
+        const title = createTextElement('h3', 'fetch-request-title', fetchRequest.item_name);
+        const requester = createTextElement('p', 'fetch-requester', `Posted by ${fetchRequest.requester.name}`);
+        requesterInfo.append(title, requester);
+
+        const budget = fetchRequest.budget === null
+            ? 'Budget flexible'
+            : `Up to ₱${new Intl.NumberFormat('en-PH', { maximumFractionDigits: 2 }).format(Number(fetchRequest.budget))}`;
+        heading.append(requesterInfo, createTextElement('span', 'fetch-budget', budget));
+
+        const details = createTextElement('p', 'fetch-request-details', fetchRequest.details);
+        const meta = document.createElement('div');
+        meta.classList.add('fetch-request-meta');
+        const delivery = document.createElement('span');
+        delivery.append('Deliver to ', createTextElement('strong', 'fetch-delivery-location', fetchRequest.delivery_location));
+        const expiresAt = createTextElement('time', 'fetch-expiry', `Expires ${fetchRequest.expires_at_display}`);
+        expiresAt.dateTime = fetchRequest.expires_at;
+        meta.append(delivery, expiresAt);
+
+        article.append(heading, details, meta);
+        requestList.querySelector('[data-fetch-empty]')?.remove();
+        requestList.prepend(article);
+        requestIds.add(requestId);
+        lastId = requestId;
+
+        while (requestList.children.length > 30) {
+            requestList.lastElementChild.remove();
+        }
+    };
+
+    const pollForFetchRequests = async () => {
+        if (isCheckingForRequests || document.hidden) return;
+
+        removeExpiredFetchRequests();
+        isCheckingForRequests = true;
+
+        try {
+            updatesUrl.searchParams.set('after', lastId);
+            const response = await fetch(updatesUrl, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Fetch request update failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+
+            if (!Array.isArray(payload.data)) {
+                throw new Error('Fetch request update response did not contain a request list.');
+            }
+
+            payload.data.forEach(addFetchRequest);
+            if (fetchStatus) fetchStatus.textContent = 'Live updates are on.';
+        } catch (error) {
+            if (fetchStatus) fetchStatus.textContent = 'Connection interrupted. Retrying for new requests…';
+            console.error(error);
+        } finally {
+            isCheckingForRequests = false;
+        }
+    };
+
+    const scheduleFetchPoll = (delay = 15000) => {
+        window.clearTimeout(pollTimeout);
+        pollTimeout = window.setTimeout(async () => {
+            await pollForFetchRequests();
+            scheduleFetchPoll();
+        }, delay);
+    };
+
+    pollForFetchRequests();
+    scheduleFetchPoll();
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            pollForFetchRequests();
+            scheduleFetchPoll();
+        }
+    });
+    window.addEventListener('focus', () => {
+        pollForFetchRequests();
+        scheduleFetchPoll();
+    });
+}
+
 const presenceIndicators = Array.from(document.querySelectorAll('[data-presence-url]'));
 
 if (presenceIndicators.length) {

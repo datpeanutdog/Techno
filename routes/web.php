@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\SupportReportController as AdminSupportReportCont
 use App\Http\Controllers\Admin\SuspensionAppealController as AdminSuspensionAppealController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\FetchRequestController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PresenceController;
@@ -45,6 +46,16 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::middleware(['auth', 'account.active'])->group(function (): void {
+    Route::get('/fetch', [FetchRequestController::class, 'index'])->name('fetch.index');
+    Route::get('/fetch/requests/create', [FetchRequestController::class, 'create'])
+        ->name('fetch.requests.create');
+    Route::post('/fetch/requests', [FetchRequestController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('fetch.requests.store');
+    Route::get('/fetch/updates', [FetchRequestController::class, 'updates'])
+        ->middleware('throttle:30,1')
+        ->name('fetch.requests.updates');
+
     Route::post('/presence/heartbeat', [PresenceController::class, 'heartbeat'])
         ->middleware('throttle:60,1')
         ->name('presence.heartbeat');

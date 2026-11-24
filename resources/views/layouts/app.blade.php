@@ -67,6 +67,9 @@
                     <a class="{{ request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['mode' => 'rent']) }}#discover" @if (request()->routeIs('marketplace.index') && request('view') !== 'saved' && request('mode') === 'rent') aria-current="page" @endif>
                         <span>Rent</span>
                     </a>
+                    <a class="{{ request()->routeIs('fetch.*') ? 'is-active' : '' }}" href="{{ route('fetch.index') }}" @if (request()->routeIs('fetch.*')) aria-current="page" @endif>
+                        <span>Fetch</span>
+                    </a>
                     <a class="{{ request()->routeIs('marketplace.index') && request('view') === 'saved' ? 'is-active' : '' }}" href="{{ route('marketplace.index', ['view' => 'saved']) }}#discover" data-saved-link @if (request()->routeIs('marketplace.index') && request('view') === 'saved') aria-current="page" @endif>
                         <span>Save for later</span>
                     </a>
@@ -141,7 +144,7 @@
                                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                             </svg>
                         </button>
-                        @unless (request()->routeIs('marketplace.index', 'conversations.*', 'my-listings', 'profile.*', 'settings.*', 'support.reports.*'))
+                        @unless (request()->routeIs('marketplace.index', 'fetch.*', 'conversations.*', 'my-listings', 'profile.*', 'settings.*', 'support.reports.*'))
                             <a class="button button-navy header-sell" href="{{ route('listings.create') }}">
                                 <span aria-hidden="true">＋</span> List an item
                             </a>
