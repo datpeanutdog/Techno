@@ -23,6 +23,7 @@ import {
   clearAuthToken,
   ConversationThread,
   getAuthToken,
+  PresenceStatus,
   requestJson,
 } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
@@ -37,6 +38,44 @@ function formatMessageDate(value: string): string {
         hour: 'numeric',
         minute: '2-digit',
       });
+}
+
+function mergeConversationMessages(
+  current: ConversationThread,
+  updated: ConversationThread,
+): ConversationThread {
+  const updatedMessages = new Map(updated.messages.map((message) => [message.id, message]));
+  const currentMessageIds = new Set(current.messages.map((message) => message.id));
+  const messages = current.messages.map((message) => {
+    const refreshedMessage = updatedMessages.get(message.id);
+    return refreshedMessage ? { ...message, ...refreshedMessage } : message;
+  });
+
+  return {
+    ...updated,
+    messages: [
+      ...messages,
+      ...updated.messages.filter((message) => !currentMessageIds.has(message.id)),
+    ],
+  };
+}
+
+function ProfileAvatar({ url, name, size }: { url: string | null; name: string; size: number }) {
+  const avatarSize = { width: size, height: size, borderRadius: size / 2 };
+
+  return url ? (
+    <Image source={{ uri: url }} style={avatarSize} />
+  ) : (
+    <View style={[avatarSize, screenStyles.messageAvatarFallback]}>
+      <Text style={screenStyles.messageAvatarInitial}>
+        {name.trim().slice(0, 1).toUpperCase() || '?'}
+      </Text>
+    </View>
+  );
+}
+
+function presenceLabel(status: PresenceStatus): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 export default function ConversationScreen() {
@@ -61,21 +100,14 @@ export default function ConversationScreen() {
       }
 
       const result = await requestJson<ConversationThread>(`/conversations/${encodeURIComponent(id)}`);
-      setConversation((current) => {
-        if (!current) return result.data;
-
-        const currentLastId = current.messages[current.messages.length - 1]?.id ?? 0;
-        const fetchedLastId = result.data.messages[result.data.messages.length - 1]?.id ?? 0;
-
-        return fetchedLastId > currentLastId ? result.data : current;
-      });
+      setConversation((current) => current ? mergeConversationMessages(current, result.data) : result.data);
       setLiveError('');
       return true;
     } catch (issue) {
       const detail = issue instanceof Error ? issue.message : 'This conversation could not be loaded.';
       if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
         await clearAuthToken();
-        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
         return false;
       }
       setError(detail);
@@ -94,26 +126,14 @@ export default function ConversationScreen() {
       }
 
       const result = await requestJson<ConversationThread>(`/conversations/${encodeURIComponent(id)}`);
-      setConversation((current) => {
-        if (!current) return result.data;
-
-        const currentLastId = current.messages[current.messages.length - 1]?.id ?? 0;
-        const newMessages = result.data.messages.filter((message) => message.id > currentLastId);
-
-        if (!newMessages.length) return current;
-
-        return {
-          ...result.data,
-          messages: [...current.messages, ...newMessages],
-        };
-      });
+      setConversation((current) => current ? mergeConversationMessages(current, result.data) : result.data);
       setLiveError('');
       return true;
     } catch (issue) {
       const detail = issue instanceof Error ? issue.message : 'New messages could not be checked.';
       if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
         await clearAuthToken();
-        router.replace({ pathname: '/account', params: { returnTo: 'messages' } });
+        router.replace({ pathname: '/account', params: { returnTo: 'conversation', conversationId: id } });
         return false;
       }
       setLiveError(detail);
@@ -187,6 +207,11 @@ export default function ConversationScreen() {
     }
   };
 
+  const lastSeenMessageId = conversation?.messages.reduce((latestId, message) => {
+    const ownMessage = message.sender_id !== conversation.other_participant.id;
+    return ownMessage && message.read_at ? Math.max(latestId, message.id) : latestId;
+  }, 0) ?? 0;
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={appStyles.safeArea}>
       <View style={appStyles.app}>
@@ -234,6 +259,21 @@ export default function ConversationScreen() {
               )}
               <View style={screenStyles.listingCopy}>
                 <Text style={screenStyles.sellerName}>{conversation.other_participant.name}</Text>
+                <View style={screenStyles.presenceLine}>
+                  <View
+                    style={[
+                      screenStyles.presenceDot,
+                      conversation.other_participant.presence_status === 'online'
+                        ? screenStyles.presenceOnline
+                        : conversation.other_participant.presence_status === 'away'
+                          ? screenStyles.presenceAway
+                          : screenStyles.presenceOffline,
+                    ]}
+                  />
+                  <Text style={screenStyles.presenceText}>
+                    {presenceLabel(conversation.other_participant.presence_status)}
+                  </Text>
+                </View>
                 <Text numberOfLines={1} style={screenStyles.listingTitle}>
                   {conversation.listing.title}
                 </Text>
@@ -264,16 +304,41 @@ export default function ConversationScreen() {
               {conversation.messages.length ? conversation.messages.map((message) => {
                 const ownMessage = message.sender_id !== conversation.other_participant.id;
                 return (
-                  <View
-                    key={message.id}
-                    style={[screenStyles.message, ownMessage && screenStyles.ownMessage]}
-                  >
-                    <Text style={[screenStyles.messageBody, ownMessage && screenStyles.ownMessageBody]}>
-                      {message.body}
-                    </Text>
-                    <Text style={[screenStyles.messageDate, ownMessage && screenStyles.ownMessageDate]}>
-                      {formatMessageDate(message.created_at)}
-                    </Text>
+                  <View key={message.id} style={[screenStyles.messageRow, ownMessage && screenStyles.ownMessageRow]}>
+                    {!ownMessage ? (
+                      <ProfileAvatar
+                        name={message.sender_name}
+                        size={28}
+                        url={message.sender_avatar_url}
+                      />
+                    ) : null}
+                    <View style={screenStyles.messageContent}>
+                      <View style={[screenStyles.message, ownMessage && screenStyles.ownMessage]}>
+                        <Text style={[screenStyles.messageBody, ownMessage && screenStyles.ownMessageBody]}>
+                          {message.body}
+                        </Text>
+                        <Text style={[screenStyles.messageDate, ownMessage && screenStyles.ownMessageDate]}>
+                          {formatMessageDate(message.created_at)}
+                        </Text>
+                      </View>
+                      {ownMessage && message.id === lastSeenMessageId ? (
+                        <View style={screenStyles.seenReceipt}>
+                          <ProfileAvatar
+                            name={conversation.other_participant.name}
+                            size={17}
+                            url={conversation.other_participant.avatar_url}
+                          />
+                          <Text style={screenStyles.seenText}>Seen</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {ownMessage ? (
+                      <ProfileAvatar
+                        name={message.sender_name}
+                        size={28}
+                        url={message.sender_avatar_url}
+                      />
+                    ) : null}
                   </View>
                 );
               }) : (
@@ -345,11 +410,25 @@ const screenStyles = StyleSheet.create({
   avatarText: { color: COLORS.navy, fontSize: 15, fontWeight: '700' },
   listingCopy: { flex: 1, minWidth: 0 },
   sellerName: { color: COLORS.navy, fontSize: 13, fontWeight: '700' },
+  presenceLine: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  presenceDot: { width: 7, height: 7, borderRadius: 4 },
+  presenceOnline: { backgroundColor: '#25834b' },
+  presenceAway: { backgroundColor: '#c18a24' },
+  presenceOffline: { backgroundColor: '#8a8177' },
+  presenceText: { color: COLORS.muted, fontSize: 11 },
   listingTitle: { marginTop: 2, color: COLORS.muted, fontSize: 12 },
   listingType: { color: COLORS.goldDark, fontSize: 11, fontWeight: '800' },
   thread: { flexGrow: 1, justifyContent: 'flex-end', gap: 10, padding: 16 },
+  messageRow: { width: '100%', flexDirection: 'row', alignItems: 'flex-end', gap: 7 },
+  ownMessageRow: { justifyContent: 'flex-end' },
+  messageContent: { maxWidth: '84%', minWidth: 0, flexShrink: 1 },
+  messageAvatarFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.paleGold,
+  },
+  messageAvatarInitial: { color: COLORS.navy, fontSize: 10, fontWeight: '700' },
   message: {
-    maxWidth: '84%',
     alignSelf: 'flex-start',
     paddingHorizontal: 13,
     paddingVertical: 10,
@@ -361,6 +440,8 @@ const screenStyles = StyleSheet.create({
   ownMessageBody: { color: COLORS.white },
   messageDate: { alignSelf: 'flex-end', marginTop: 4, color: COLORS.muted, fontSize: 11 },
   ownMessageDate: { color: '#e5d6c8' },
+  seenReceipt: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5, marginTop: 5 },
+  seenText: { color: COLORS.muted, fontSize: 10 },
   compose: {
     flexDirection: 'row',
     alignItems: 'flex-end',

@@ -20,6 +20,7 @@ import { COLORS, styles } from '../App';
 import {
   clearAuthToken,
   getAuthToken,
+  isApiErrorStatus,
   Listing,
   requestJson,
   saveAuthToken,
@@ -34,7 +35,23 @@ function getExternalAvatarUrl(avatarUrl: string | null): string {
 }
 
 export default function AccountScreen() {
-  const { returnTo, listingSlug } = useLocalSearchParams<{ returnTo?: string; listingSlug?: string }>();
+  const {
+    returnTo,
+    listingSlug,
+    editId,
+    conversationId,
+    sellerId,
+    reportedUserId,
+    reportedUserName,
+  } = useLocalSearchParams<{
+    returnTo?: string;
+    listingSlug?: string;
+    editId?: string;
+    conversationId?: string;
+    sellerId?: string;
+    reportedUserId?: string;
+    reportedUserName?: string;
+  }>();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [mode, setMode] = useState<AccountMode>('login');
@@ -50,34 +67,71 @@ export default function AccountScreen() {
   const campus = useRef('');
   const avatarUrl = useRef('');
 
-  const loadAccount = useCallback(async () => {
-    if (!await getAuthToken()) {
-      setUser(null);
-      setListings([]);
-      return;
+  const resumeDestination = useCallback((): boolean => {
+    if (returnTo === 'sell') {
+      router.replace(editId ? { pathname: '/sell', params: { editId } } : '/sell');
+      return true;
+    }
+    if (returnTo === 'support') {
+      router.replace({
+        pathname: '/support',
+        params: {
+          ...(reportedUserId ? { reportedUserId } : {}),
+          ...(reportedUserName ? { reportedUserName } : {}),
+        },
+      });
+      return true;
+    }
+    if (returnTo === 'messages') {
+      router.replace('/messages');
+      return true;
+    }
+    if (returnTo === 'message' && typeof listingSlug === 'string') {
+      router.replace({ pathname: '/messages/new', params: { listingSlug } });
+      return true;
+    }
+    if (returnTo === 'conversation' && typeof conversationId === 'string') {
+      router.replace({ pathname: '/messages/[id]', params: { id: conversationId } });
+      return true;
+    }
+    if (returnTo === 'seller' && typeof sellerId === 'string') {
+      router.replace({ pathname: '/seller/[id]', params: { id: sellerId } });
+      return true;
     }
 
+    return false;
+  }, [conversationId, editId, listingSlug, reportedUserId, reportedUserName, returnTo, sellerId]);
+
+  const loadAccount = useCallback(async (): Promise<UserProfile | null> => {
     try {
-      const [profile, mine] = await Promise.all([
-        requestJson<UserProfile>('/auth/me'),
-        requestJson<Listing[]>('/my-listings'),
-      ]);
+      if (!await getAuthToken()) {
+        setUser(null);
+        setListings([]);
+        return null;
+      }
+
+      const profile = await requestJson<UserProfile>('/auth/me');
       setUser(profile.data);
       name.current = profile.data.name;
       email.current = profile.data.email;
       bio.current = profile.data.bio ?? '';
       campus.current = profile.data.campus ?? '';
       avatarUrl.current = getExternalAvatarUrl(profile.data.avatar_url);
+
+      const mine = await requestJson<Listing[]>('/my-listings');
       setListings(mine.data);
+      setError('');
+      return profile.data;
     } catch (issue) {
       const detail = issue instanceof Error ? issue.message : 'Your account could not be loaded.';
-      if (detail.includes('(401)') || detail.includes('(Unauthenticated')) {
+      if (isApiErrorStatus(issue, 401)) {
         await clearAuthToken();
         setUser(null);
         setListings([]);
-        return;
+        return null;
       }
       setError(detail);
+      return null;
     }
   }, []);
 
@@ -114,23 +168,16 @@ export default function AccountScreen() {
       });
 
       if (!result.token) {
-        throw new Error('PASABUY could not start a secure session. Please try again.');
+        throw new Error('Pasabuy could not start a secure session. Please try again.');
       }
 
       await saveAuthToken(result.token);
       setUser(result.data);
       setNameFromProfile(result.data);
+
       setMessage(mode === 'register' ? result.message ?? 'Your account is ready.' : 'You are signed in.');
       await loadAccount();
-      if (returnTo === 'sell') {
-        router.replace('/sell');
-      } else if (returnTo === 'support') {
-        router.replace('/support');
-      } else if (returnTo === 'messages') {
-        router.replace('/messages');
-      } else if (returnTo === 'message' && typeof listingSlug === 'string') {
-        router.replace({ pathname: '/messages/new', params: { listingSlug } });
-      } else {
+      if (!resumeDestination()) {
         router.replace('/');
       }
     } catch (issue) {
@@ -201,7 +248,7 @@ export default function AccountScreen() {
   const pickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Photo access needed', 'Allow PASABUY to access your photos to choose a profile picture.');
+      Alert.alert('Photo access needed', 'Allow Pasabuy to access your photos to choose a profile picture.');
       return;
     }
 
@@ -277,7 +324,7 @@ export default function AccountScreen() {
                   <Text style={styles.brandIconText}>✓</Text>
                 </View>
                 <View>
-                  <Text style={styles.brandName}>pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
+                  <Text style={styles.brandName}>Pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
                 </View>
               </View>
               <MenuButton />
@@ -355,7 +402,7 @@ export default function AccountScreen() {
               </>
             ) : (
               <View style={styles.formCard}>
-                <Text style={styles.formHeading}>{mode === 'register' ? 'Create your account' : mode === 'forgot' ? 'Reset your password' : 'Log in to PASABUY'}</Text>
+                <Text style={styles.formHeading}>{mode === 'register' ? 'Create your account' : mode === 'forgot' ? 'Reset your password' : 'Log in to Pasabuy'}</Text>
                 <Text style={styles.formSubheading}>Your account lets you post and manage school-related items.</Text>
                 {mode === 'register' ? (
                   <>

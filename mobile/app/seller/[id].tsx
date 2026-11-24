@@ -154,7 +154,7 @@ export default function SellerProfileScreen() {
                 )}
               </View>
               <View style={sellerStyles.profileCopy}>
-                <Text style={sellerStyles.eyebrow}>PASABUY STUDENT SELLER</Text>
+                <Text style={sellerStyles.eyebrow}>Pasabuy student seller</Text>
                 <Text style={sellerStyles.name}>{seller.name}</Text>
                 <Text style={sellerStyles.muted}>{seller.campus ?? 'Campus community member'}</Text>
                 {seller.bio ? <Text style={sellerStyles.bio}>{seller.bio}</Text> : null}
@@ -266,7 +266,7 @@ export default function SellerProfileScreen() {
               <Text style={sellerStyles.emptyMessage}>No reviews yet. Be the first to share feedback.</Text>
             )}
             <Text style={sellerStyles.disclaimer}>
-              Reviews are from PASABUY members and are not independently verified as completed transactions.
+              Reviews are from Pasabuy members and are not independently verified as completed transactions.
             </Text>
           </ScrollView>
         ) : null}

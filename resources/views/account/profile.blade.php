@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Your profile — PASABUY')
+@section('title', 'Your profile — Pasabuy')
 
 @section('content')
     @php
@@ -34,5 +34,6 @@
             <p class="form-help">Account ID: {{ auth()->user()->account_identifier }} · Account email: {{ auth()->user()->email }}</p>
             <button class="button button-navy form-submit" type="submit">Save profile <span aria-hidden="true">→</span></button>
         </form>
+
     </section>
 @endsection

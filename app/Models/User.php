@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -14,26 +15,38 @@ use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password', 'bio', 'campus', 'avatar_path'])]
-#[Hidden(['password', 'remember_token', 'avatar_path'])]
+#[Hidden([
+    'password',
+    'remember_token',
+    'avatar_path',
+    'email_verified_at',
+    'presence_heartbeat_at',
+    'presence_active',
+])]
 class User extends Authenticatable
 {
     public const ROLE_ADMIN = 'admin';
 
     public const ROLE_USER = 'user';
 
+    public const PRESENCE_OFFLINE_AFTER_MINUTES = 2;
+
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
-
-    protected $appends = ['avatar_url'];
 
     protected $attributes = [
         'role' => self::ROLE_USER,
     ];
 
+    protected $appends = ['avatar_url'];
+
     protected static function booted(): void
     {
         static::creating(function (User $user): void {
-            if ($user->email && in_array(Str::lower($user->email), config('app.admin_emails', []), true)) {
+            if (
+                $user->email
+                && in_array(Str::lower($user->email), config('app.admin_emails', []), true)
+            ) {
                 $user->role = self::ROLE_ADMIN;
             }
         });
@@ -42,6 +55,11 @@ class User extends Authenticatable
     public function listings(): HasMany
     {
         return $this->hasMany(Listing::class);
+    }
+
+    public function fetchRequests(): HasMany
+    {
+        return $this->hasMany(FetchRequest::class);
     }
 
     public function savedListings(): BelongsToMany
@@ -86,12 +104,29 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === self::ROLE_ADMIN;
+        return $this->role === self::ROLE_ADMIN
+            || in_array(
+                Str::lower($this->email),
+                config('app.admin_emails', []),
+                true,
+            );
     }
 
     public function isSuspended(): bool
     {
         return $this->suspended_at !== null;
+    }
+
+    public function messengerPresenceStatus(): string
+    {
+        if (
+            ! $this->presence_heartbeat_at
+            || $this->presence_heartbeat_at->lt(now()->subMinutes(self::PRESENCE_OFFLINE_AFTER_MINUTES))
+        ) {
+            return 'offline';
+        }
+
+        return $this->presence_active ? 'online' : 'away';
     }
 
     public function getAccountIdentifierAttribute(): string
@@ -119,6 +154,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'presence_heartbeat_at' => 'datetime',
+            'presence_active' => 'boolean',
             'password' => 'hashed',
             'suspended_at' => 'datetime',
         ];

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 export type ListingType = 'sale' | 'rent';
+export type PresenceStatus = 'online' | 'away' | 'offline';
 
 export type UserProfile = {
   id: number;
@@ -43,7 +44,9 @@ export type Listing = {
 export type Conversation = {
   id: number;
   listing: Pick<Listing, 'id' | 'title' | 'slug' | 'type' | 'price' | 'rent_period' | 'image_url'>;
-  other_participant: Pick<UserProfile, 'id' | 'name' | 'campus' | 'avatar_url'>;
+  other_participant: Pick<UserProfile, 'id' | 'name' | 'campus' | 'avatar_url'> & {
+    presence_status: PresenceStatus;
+  };
   latest_message: Pick<ChatMessage, 'body' | 'created_at'> | null;
   unread_messages_count: number;
 };
@@ -51,8 +54,11 @@ export type Conversation = {
 export type ChatMessage = {
   id: number;
   sender_id: number;
+  sender_name: string;
+  sender_avatar_url: string | null;
   body: string;
   created_at: string;
+  read_at: string | null;
 };
 
 export type ConversationThread = Conversation & {
@@ -66,6 +72,17 @@ type ApiResponse<T> = {
   message?: string;
   errors?: Record<string, string[]>;
 };
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export function isApiErrorStatus(issue: unknown, status: number): issue is ApiError {
+  return issue instanceof ApiError && issue.status === status;
+}
 
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
@@ -140,12 +157,12 @@ export async function requestJson<T>(
   } catch {
     if (controller.signal.aborted) {
       throw new Error(
-        `PASABUY took too long to respond. Check that Laravel is running on port 8000 and your phone can reach this address:\n\n${API_BASE_URL}`,
+        `Pasabuy took too long to respond. Check that Laravel is running on port 8000 and your phone can reach this address:\n\n${API_BASE_URL}`,
       );
     }
 
     throw new Error(
-      `Can't reach PASABUY right now. Check that Laravel is running and your phone is on the same Wi-Fi.\n\nAPI: ${API_BASE_URL}`,
+      `Can't reach Pasabuy right now. Check that Laravel is running and your phone is on the same Wi-Fi.\n\nAPI: ${API_BASE_URL}`,
     );
   } finally {
     clearTimeout(timeout);
@@ -153,7 +170,7 @@ export async function requestJson<T>(
 
   if (controller.signal.aborted) {
     throw new Error(
-      `PASABUY took too long to respond. Check that Laravel is running on port 8000 and your phone can reach this address:\n\n${API_BASE_URL}`,
+      `Pasabuy took too long to respond. Check that Laravel is running on port 8000 and your phone can reach this address:\n\n${API_BASE_URL}`,
     );
   }
 

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Reset your password — PASABUY')
+@section('title', 'Reset your password — Pasabuy')
 
 @section('content')
     <section class="auth-shell">

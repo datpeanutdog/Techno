@@ -21,18 +21,40 @@ class MessageController extends Controller
 
         $messages = $conversation->messages()
             ->where('id', '>', $data['after'])
-            ->with('sender:id,name')
+            ->with('sender:id,name,avatar_path')
             ->oldest('id')
             ->get();
 
-        $conversation->messages()
-            ->whereIn('id', $messages->pluck('id'))
-            ->where('sender_id', '!=', $request->user()->id)
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
+        $unreadMessageIds = $messages
+            ->filter(fn (Message $message): bool => $message->sender_id !== $request->user()->id && $message->read_at === null)
+            ->pluck('id');
+
+        if ($unreadMessageIds->isNotEmpty()) {
+            $conversation->messages()
+                ->whereIn('id', $unreadMessageIds)
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+        }
+
+        $lastSeenMessageId = $conversation->messages()
+            ->where('sender_id', $request->user()->id)
+            ->whereNotNull('read_at')
+            ->max('id');
 
         return response()->json([
             'data' => $messages->map(fn (Message $message): array => $this->messagePayload($message)),
+            'last_seen_message_id' => $lastSeenMessageId,
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    public function presence(Request $request, Conversation $conversation): JsonResponse
+    {
+        abort_unless(Gate::allows('view', $conversation), 404);
+
+        return response()->json([
+            'data' => [
+                'presence_status' => $conversation->otherParticipantFor($request->user())->messengerPresenceStatus(),
+            ],
         ])->header('Cache-Control', 'no-store');
     }
 
@@ -51,7 +73,7 @@ class MessageController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'data' => $this->messagePayload($message->load('sender:id,name')),
+                'data' => $this->messagePayload($message->load('sender:id,name,avatar_path')),
             ], 201);
         }
 
@@ -61,7 +83,7 @@ class MessageController extends Controller
     }
 
     /**
-     * @return array<string, int|string>
+     * @return array<string, int|string|null>
      */
     private function messagePayload(Message $message): array
     {
@@ -69,9 +91,11 @@ class MessageController extends Controller
             'id' => $message->id,
             'sender_id' => $message->sender_id,
             'sender_name' => $message->sender->name,
+            'sender_avatar_url' => $message->sender->avatar_url,
             'body' => $message->body,
             'created_at' => $message->created_at->toIso8601String(),
             'display_time' => $message->created_at->format('M j, g:i a'),
+            'read_at' => $message->read_at?->toIso8601String(),
         ];
     }
 }

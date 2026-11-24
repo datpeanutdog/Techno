@@ -18,7 +18,7 @@ if ($portsInUse) {
 
 $quotedRoot = "'" + $PSScriptRoot.Replace("'", "''") + "'"
 $laravelCommand = "Set-Location -LiteralPath $quotedRoot; php artisan serve --host=0.0.0.0 --port=8000"
-$expoCommand = "`$env:REACT_NATIVE_PACKAGER_HOSTNAME='$wifiAddress'; Set-Location -LiteralPath '$($PSScriptRoot.Replace("'", "''"))\mobile'; npm start -- --lan"
+$expoCommand = "`$env:REACT_NATIVE_PACKAGER_HOSTNAME='$wifiAddress'; Set-Location -LiteralPath '$($PSScriptRoot.Replace("'", "''"))\mobile'; npm start -- --lan --go"
 
 Start-Process powershell.exe -ArgumentList "-NoExit -ExecutionPolicy Bypass -Command `"$laravelCommand`""
 Start-Process powershell.exe -ArgumentList "-NoExit -ExecutionPolicy Bypass -Command `"$expoCommand`""

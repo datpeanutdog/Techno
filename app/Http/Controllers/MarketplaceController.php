@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Listing;
 use App\Support\ListingCategories;
 use App\Support\ListingData;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,11 +28,23 @@ class MarketplaceController extends Controller
             'category' => ['nullable', 'in:'.implode(',', ListingCategories::ALL)],
             'sort' => ['nullable', 'in:latest,price_low,price_high'],
             'view' => ['nullable', 'in:saved'],
+            'favorites' => [
+                'nullable',
+                'string',
+                'max:4000',
+                'regex:/\A[1-9][0-9]*(?:,[1-9][0-9]*)*\z/',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && count(explode(',', $value)) > 500) {
+                        $fail('You can view up to 500 saved finds at a time.');
+                    }
+                },
+            ],
         ]);
 
         $isSavedView = ($filters['view'] ?? null) === 'saved';
-        $savedListingIds = $request->user()->savedListings()->pluck('listings.id')->map(fn (int $id): int => $id)->all();
-        $favoriteIds = $isSavedView ? $savedListingIds : [];
+        $favoriteIds = $isSavedView
+            ? $request->user()->savedListings()->pluck('listings.id')->map(fn (int $id): int => $id)->all()
+            : [];
         sort($favoriteIds);
 
         $query = Listing::query()
@@ -76,7 +89,7 @@ class MarketplaceController extends Controller
             'categories' => ListingCategories::ALL,
             'isSavedView' => $isSavedView,
             'favoriteIds' => $favoriteIds,
-            'savedListingIds' => $savedListingIds,
+            'savedListingIds' => $request->user()->savedListings()->pluck('listings.id')->map(fn (int $id): int => $id)->all(),
         ]);
     }
 
@@ -136,7 +149,7 @@ class MarketplaceController extends Controller
 
         return redirect()
             ->route('listings.show', $listing)
-            ->with('status', 'Your listing is live. Thanks for being part of PASABUY!');
+            ->with('status', 'Your listing is live. Thanks for being part of Pasabuy!');
     }
 
     public function myListings(Request $request): View

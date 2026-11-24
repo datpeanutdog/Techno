@@ -16,7 +16,7 @@ class AccountTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_web_registration_creates_an_account_and_enters_the_hub(): void
+    public function test_web_registration_creates_an_account_without_email_verification(): void
     {
         Notification::fake();
 
@@ -29,7 +29,15 @@ class AccountTest extends TestCase
 
         $user = User::where('email', 'jamie@example.test')->firstOrFail();
         $this->assertAuthenticatedAs($user);
+        $this->assertNull($user->email_verified_at);
         Notification::assertNothingSent();
+    }
+
+    public function test_email_verification_endpoints_are_removed(): void
+    {
+        $this->get('/email/verify')->assertNotFound();
+        $this->post('/email/verification-notification')->assertNotFound();
+        $this->postJson('/api/auth/verification-notification')->assertNotFound();
     }
 
     public function test_web_login_profile_customization_and_logout_work(): void
@@ -73,7 +81,7 @@ class AccountTest extends TestCase
         Storage::disk('public')->assertExists($updated->avatar_path);
     }
 
-    public function test_mobile_registration_returns_a_token_and_allows_listing(): void
+    public function test_mobile_registration_returns_a_token_without_email_verification_and_allows_account_features(): void
     {
         Notification::fake();
         $existingUser = User::factory()->create();
@@ -91,6 +99,7 @@ class AccountTest extends TestCase
         $this->assertNotEmpty($response->json('token'));
         $this->assertNotSame($existingUser->account_identifier, $response->json('data.account_identifier'));
         $this->assertDatabaseHas('personal_access_tokens', ['tokenable_type' => User::class]);
+        $user = User::where('email', 'jamie@example.test')->firstOrFail();
         Notification::assertNothingSent();
         $this->withToken($response->json('token'))->postJson('/api/listings', [
             'title' => 'My chemistry textbook',
@@ -100,6 +109,30 @@ class AccountTest extends TestCase
             'category' => 'Books & Notes',
             'location' => 'Main campus',
         ])->assertCreated();
+        $this->assertDatabaseHas('listings', [
+            'title' => 'My chemistry textbook',
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_mobile_registration_cannot_assign_an_admin_role(): void
+    {
+        config(['app.admin_emails' => []]);
+        Notification::fake();
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Jamie Lee',
+            'email' => 'jamie@example.test',
+            'password' => 'Correct-Horse-123!',
+            'password_confirmation' => 'Correct-Horse-123!',
+            'role' => User::ROLE_ADMIN,
+        ])->assertCreated()
+            ->assertJsonPath('data.role', User::ROLE_USER);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'jamie@example.test',
+            'role' => User::ROLE_USER,
+        ]);
     }
 
     public function test_mobile_registration_cannot_assign_an_admin_role(): void
@@ -123,14 +156,16 @@ class AccountTest extends TestCase
 
     public function test_mobile_login_issues_a_token_and_logout_revokes_it(): void
     {
-        $user = User::factory()->create(['email' => 'jamie@example.test']);
+        $user = User::factory()->unverified()->create(['email' => 'jamie@example.test']);
         $login = $this->postJson('/api/auth/login', [
             'email' => $user->email,
             'password' => 'password',
         ])->assertOk();
 
         $token = $login->json('token');
-        $this->withToken($token)->getJson('/api/auth/me')->assertOk()->assertJsonPath('data.email', $user->email);
+        $this->withToken($token)->getJson('/api/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.email', $user->email);
         $this->withToken($token)->postJson('/api/auth/logout')->assertOk();
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }

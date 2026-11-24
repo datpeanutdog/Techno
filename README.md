@@ -1,6 +1,6 @@
-# PASABUY
+# Pasabuy
 
-PASABUY is a student-to-student Laravel marketplace for buying, selling, and renting school books, supplies, technology, uniforms, and dorm essentials. Sign in or create an account to enter the marketplace hub.
+Pasabuy is a student-to-student Laravel marketplace for buying, selling, and renting school books, supplies, technology, uniforms, and dorm essentials. Sign in or create an account to enter the marketplace hub.
 
 ## Get started
 

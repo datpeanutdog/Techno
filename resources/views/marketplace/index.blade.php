@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'PASABUY — your campus marketplace')
+@section('title', 'Pasabuy — your campus marketplace')
 
 @section('content')
     <section class="discover-section {{ $isSavedView ? 'saved-only-section' : '' }}" id="discover">
         @if ($isSavedView)
-            <header class="saved-view-heading" data-saved-view>
+            <header class="saved-view-heading" data-saved-view data-favorites="{{ implode(',', $favoriteIds) }}">
                 <span class="saved-view-mark" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none">
                         <path d="M6.75 3.75h10.5A1.75 1.75 0 0 1 19 5.5v15l-7-4.5-7 4.5v-15a1.75 1.75 0 0 1 1.75-1.75Z"/>
@@ -13,7 +13,7 @@
                 </span>
                 <span class="saved-view-copy">
                     <h1>Save for later</h1>
-                    <p>{{ $listings->total() }} {{ $listings->total() === 1 ? 'listing' : 'listings' }} saved to your account.</p>
+                    <p>{{ $listings->total() }} {{ $listings->total() === 1 ? 'listing' : 'listings' }} saved on this device.</p>
                 </span>
             </header>
         @endif
@@ -26,7 +26,7 @@
         </div>
 
         <form class="marketplace-filter-bar" method="GET" action="{{ route('marketplace.index') }}" aria-label="Search and filter campus listings">
-            @foreach (['mode', 'location', 'sort', 'view'] as $filter)
+            @foreach (['mode', 'location', 'sort', 'view', 'favorites'] as $filter)
                 @if (request($filter)) <input type="hidden" name="{{ $filter }}" value="{{ request($filter) }}"> @endif
             @endforeach
             <label class="marketplace-search">
@@ -52,7 +52,7 @@
                 </a>
             </div>
             <form class="sort-form" method="GET" action="{{ route('marketplace.index') }}">
-                @foreach (['q', 'location', 'mode', 'category', 'view'] as $filter)
+                @foreach (['q', 'location', 'mode', 'category', 'view', 'favorites'] as $filter)
                     @if (request($filter)) <input type="hidden" name="{{ $filter }}" value="{{ request($filter) }}"> @endif
                 @endforeach
                 <label for="sort">Sort by</label>
@@ -133,6 +133,7 @@
                                     @endif
                                 </a>
                             @endif
+                            <time class="listing-posted" datetime="{{ $listing->created_at->toIso8601String() }}">Listed {{ $listing->created_at->diffForHumans() }}</time>
                             <div class="listing-card-bottom">
                                 <p class="listing-price">₱{{ number_format((float) $listing->price, $listing->price == (int) $listing->price ? 0 : 2) }}@if ($listing->type === 'rent')<span> / {{ $listing->rent_period }}</span>@endif</p>
                                 <span class="seller-rating">

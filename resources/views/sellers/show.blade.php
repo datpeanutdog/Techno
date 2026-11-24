@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $seller->name.' — seller profile | PASABUY')
+@section('title', $seller->name.' — seller profile | Pasabuy')
 
 @section('content')
     @php
@@ -18,7 +18,7 @@
                 @endif
             </div>
             <div class="seller-profile-copy">
-                <p class="eyebrow">PASABUY student seller</p>
+                <p class="eyebrow">Pasabuy student seller</p>
                 <h1>{{ $seller->name }}</h1>
                 <p class="seller-profile-campus">{{ $seller->campus ?: 'Campus community member' }}</p>
                 @if ($seller->bio)
@@ -147,7 +147,7 @@
             @else
                 <p class="seller-empty-state">No reviews yet. Be the first to share feedback.</p>
             @endif
-            <p class="seller-review-note">Reviews are submitted by PASABUY members and are not independently verified as completed transactions.</p>
+            <p class="seller-review-note">Reviews are submitted by Pasabuy members and are not independently verified as completed transactions.</p>
         </section>
     </div>
 @endsection

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Account support — PASABUY')
+@section('title', 'Account support — Pasabuy')
 
 @section('content')
     <div class="support-shell">

@@ -5,8 +5,10 @@ use App\Http\Controllers\Admin\SupportReportController as AdminSupportReportCont
 use App\Http\Controllers\Admin\SuspensionAppealController as AdminSuspensionAppealController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\FetchRequestController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\PresenceController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SupportReportController;
 use App\Http\Controllers\SuspensionAppealController;
@@ -30,11 +32,11 @@ Route::post('/support', [SupportReportController::class, 'storeContact'])
     ->name('support.reports.contact.store');
 
 Route::middleware('auth')->group(function (): void {
+    Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
     Route::get('/sellers/{user}', [SellerController::class, 'show'])->name('sellers.show');
 });
 
 Route::middleware('auth')->group(function (): void {
-    Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
     Route::get('/account/suspension', [SuspensionAppealController::class, 'show'])->name('account.suspension.show');
     Route::post('/account/suspension/appeals', [SuspensionAppealController::class, 'store'])
         ->middleware('throttle:5,1,counter-appeal-v2:')
@@ -44,6 +46,20 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::middleware(['auth', 'account.active'])->group(function (): void {
+    Route::get('/fetch', [FetchRequestController::class, 'index'])->name('fetch.index');
+    Route::get('/fetch/requests/create', [FetchRequestController::class, 'create'])
+        ->name('fetch.requests.create');
+    Route::post('/fetch/requests', [FetchRequestController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('fetch.requests.store');
+    Route::get('/fetch/updates', [FetchRequestController::class, 'updates'])
+        ->middleware('throttle:30,1')
+        ->name('fetch.requests.updates');
+
+    Route::post('/presence/heartbeat', [PresenceController::class, 'heartbeat'])
+        ->middleware('throttle:60,1')
+        ->name('presence.heartbeat');
+
     Route::prefix('/admin/users')
         ->name('admin.users.')
         ->middleware('can:manage-users')
@@ -73,6 +89,9 @@ Route::middleware(['auth', 'account.active'])->group(function (): void {
     Route::get('/messages/{conversation}/updates', [MessageController::class, 'updates'])
         ->middleware('throttle:60,1')
         ->name('conversations.messages.updates');
+    Route::get('/messages/{conversation}/presence', [MessageController::class, 'presence'])
+        ->middleware('throttle:60,1')
+        ->name('conversations.presence');
     Route::get('/listings/{listing:slug}/message', [MarketplaceController::class, 'messageSeller'])
         ->name('listings.messages.create');
     Route::post('/listings/{listing:slug}/messages', [ConversationController::class, 'store'])

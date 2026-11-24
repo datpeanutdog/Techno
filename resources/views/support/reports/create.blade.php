@@ -1,14 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Contact customer support — PASABUY')
+@section('title', 'Contact customer support — Pasabuy')
 
 @section('content')
     <div class="support-shell">
-        <a class="back-link" href="{{ route('marketplace.index') }}">← Back to the marketplace</a>
         <section class="support-card">
             <p class="eyebrow">CUSTOMER SERVICE</p>
             <h1>Report an account</h1>
-            <p class="support-intro">Tell our support team what happened. Reports are reviewed by a PASABUY admin, and a report does not automatically suspend an account.</p>
+            <p class="support-intro">Tell our support team what happened. Reports are reviewed by a Pasabuy admin, and a report does not automatically suspend an account.</p>
 
             @if ($errors->any())
                 <div class="support-errors" role="alert">

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Listing;
+use App\Models\Message;
 use App\Models\User;
+use App\Notifications\NewConversationNotification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,9 +58,11 @@ class ConversationController extends Controller
             ->latest('created_at')
             ->latest('id')
             ->limit(50)
-            ->get(['id', 'sender_id', 'body', 'created_at'])
+            ->with('sender:id,name,avatar_path')
+            ->get(['id', 'sender_id', 'body', 'created_at', 'read_at'])
             ->reverse()
-            ->values();
+            ->values()
+            ->map(fn (Message $message): array => $this->messagePayload($message));
 
         return response()->json([
             'data' => [
@@ -94,6 +98,10 @@ class ConversationController extends Controller
             return $conversation;
         });
 
+        if ($conversation->wasRecentlyCreated) {
+            $conversation->seller->notify(new NewConversationNotification($conversation->id));
+        }
+
         $this->loadConversationPayloadRelations($conversation, $user);
 
         return response()->json([
@@ -113,7 +121,9 @@ class ConversationController extends Controller
             'body' => $data['body'],
         ]);
 
-        return response()->json(['data' => $message], 201);
+        return response()->json([
+            'data' => $this->messagePayload($message->load('sender:id,name,avatar_path')),
+        ], 201);
     }
 
     /**
@@ -132,12 +142,29 @@ class ConversationController extends Controller
                 'name' => $otherParticipant->name,
                 'campus' => $otherParticipant->campus,
                 'avatar_url' => $otherParticipant->avatar_url,
+                'presence_status' => $otherParticipant->messengerPresenceStatus(),
             ],
             'latest_message' => $latestMessage ? [
                 'body' => $latestMessage->body,
                 'created_at' => $latestMessage->created_at,
             ] : null,
             'unread_messages_count' => (int) $conversation->unread_messages_count,
+        ];
+    }
+
+    /**
+     * @return array<string, int|string|null>
+     */
+    private function messagePayload(Message $message): array
+    {
+        return [
+            'id' => $message->id,
+            'sender_id' => $message->sender_id,
+            'sender_name' => $message->sender->name,
+            'sender_avatar_url' => $message->sender->avatar_url,
+            'body' => $message->body,
+            'created_at' => $message->created_at->toIso8601String(),
+            'read_at' => $message->read_at?->toIso8601String(),
         ];
     }
 

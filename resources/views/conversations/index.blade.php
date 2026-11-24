@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Your messages — PASABUY')
+@section('title', 'Your messages — Pasabuy')
 
 @section('content')
     <section class="messages-shell">
@@ -17,10 +17,22 @@
                 @foreach ($conversations as $conversation)
                     @php($otherParticipant = $conversation->otherParticipantFor(auth()->user()))
                     <a class="conversation-row" href="{{ route('conversations.show', $conversation) }}">
-                        <span class="conversation-avatar">{{ collect(explode(' ', $otherParticipant->name))->map(fn (string $part): string => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))->take(2)->implode('') }}</span>
+                        <span class="conversation-avatar">
+                            @if ($otherParticipant->avatar_url)
+                                <img class="conversation-avatar-image" src="{{ $otherParticipant->avatar_url }}" alt="" aria-hidden="true">
+                            @else
+                                {{ collect(explode(' ', $otherParticipant->name))->map(fn (string $part): string => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))->take(2)->implode('') }}
+                            @endif
+                        </span>
                         <span class="conversation-copy">
                             <span class="conversation-topline">
-                                <strong>{{ $otherParticipant->name }}</strong>
+                                <span class="conversation-person">
+                                    <strong>{{ $otherParticipant->name }}</strong>
+                                    <span class="presence-status" data-presence-status="{{ $otherParticipant->messengerPresenceStatus() }}" data-presence-url="{{ route('conversations.presence', $conversation) }}">
+                                        <span class="presence-dot" aria-hidden="true"></span>
+                                        <span data-presence-label>{{ ucfirst($otherParticipant->messengerPresenceStatus()) }}</span>
+                                    </span>
+                                </span>
                                 <span>{{ $conversation->latestMessage?->created_at?->diffForHumans() }}</span>
                             </span>
                             <span class="conversation-listing">{{ $conversation->listing->title }}</span>

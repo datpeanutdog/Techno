@@ -5,7 +5,9 @@ namespace Tests\Feature\Api;
 use App\Models\Conversation;
 use App\Models\Listing;
 use App\Models\User;
+use App\Notifications\NewConversationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ConversationControllerTest extends TestCase
@@ -17,8 +19,66 @@ class ConversationControllerTest extends TestCase
         $this->getJson('/api/conversations')->assertUnauthorized();
     }
 
+    public function test_mobile_presence_heartbeat_records_activity_and_marks_idle_users_away(): void
+    {
+        $user = User::factory()->create();
+        $this->travelTo(now()->startOfMinute());
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/presence/heartbeat', ['active' => true])
+            ->assertOk()
+            ->assertJsonPath('data.presence_status', 'online');
+
+        $this->travel(16)->minutes();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/presence/heartbeat', ['active' => false])
+            ->assertOk()
+            ->assertJsonPath('data.presence_status', 'away');
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'presence_active' => false]);
+    }
+
+    public function test_mobile_presence_heartbeat_rejects_invalid_activity_state(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/presence/heartbeat', ['active' => 'later'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['active']);
+
+        $this->assertNull($user->fresh()->presence_heartbeat_at);
+    }
+
+    public function test_mobile_conversation_exposes_read_receipts_and_sender_avatars(): void
+    {
+        $seller = User::factory()->create(['avatar_path' => 'https://images.example.test/seller.png']);
+        $buyer = User::factory()->create(['avatar_path' => 'https://images.example.test/buyer.png']);
+        $listing = $this->createListing($seller);
+        $conversation = $this->createConversation($buyer, $seller, $listing);
+        $message = $conversation->messages()->create([
+            'sender_id' => $buyer->id,
+            'body' => 'Is this available?',
+        ]);
+
+        $this->actingAs($seller, 'sanctum')
+            ->getJson('/api/conversations/'.$conversation->id)
+            ->assertOk();
+
+        $response = $this->actingAs($buyer, 'sanctum')
+            ->getJson('/api/conversations/'.$conversation->id);
+
+        $response->assertOk()
+            ->assertJsonPath('data.messages.0.id', $message->id)
+            ->assertJsonPath('data.messages.0.sender_avatar_url', 'https://images.example.test/buyer.png')
+            ->assertJsonPath('data.other_participant.presence_status', 'offline');
+        $this->assertNotNull($response->json('data.messages.0.read_at'));
+    }
+
     public function test_mobile_can_start_a_conversation_about_a_listing(): void
     {
+        Notification::fake();
+
         $seller = User::factory()->create(['name' => 'Sam Seller']);
         $buyer = User::factory()->create(['name' => 'Bailey Buyer']);
         $listing = $this->createListing($seller);
@@ -42,6 +102,23 @@ class ConversationControllerTest extends TestCase
             'sender_id' => $buyer->id,
             'body' => 'Can I pick this up after class?',
         ]);
+        Notification::assertSentTo($seller, NewConversationNotification::class);
+    }
+
+    public function test_mobile_emails_an_unverified_seller_about_a_new_conversation(): void
+    {
+        Notification::fake();
+
+        $seller = User::factory()->unverified()->create();
+        $buyer = User::factory()->create();
+        $listing = $this->createListing($seller);
+
+        $this->actingAs($buyer, 'sanctum')->postJson(
+            '/api/listings/'.$listing->slug.'/messages',
+            ['body' => 'Can I pick this up after class?'],
+        )->assertCreated();
+
+        Notification::assertSentTo($seller, NewConversationNotification::class);
     }
 
     public function test_mobile_inbox_shows_only_participant_conversations_and_unread_counts(): void

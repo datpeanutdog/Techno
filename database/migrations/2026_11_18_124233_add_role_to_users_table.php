@@ -12,9 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('role')->default('user')->index()->after('email');
-        });
+        if (! Schema::hasColumn('users', 'role')) {
+            Schema::table('users', function (Blueprint $table): void {
+                $table->string('role')->default('user')->index();
+            });
+        }
 
         $adminEmails = config('app.admin_emails', []);
 
@@ -30,9 +32,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex(['role']);
-            $table->dropColumn('role');
-        });
+        if (Schema::hasColumn('users', 'role')) {
+            Schema::table('users', function (Blueprint $table): void {
+                $table->dropIndex(['role']);
+                $table->dropColumn('role');
+            });
+        }
     }
 };

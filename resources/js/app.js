@@ -1,6 +1,61 @@
 const themePreferenceKey = 'pasabuy:theme';
 const toast = document.querySelector('#toast');
 
+const presenceHeartbeatUrl = document.body.dataset.presenceHeartbeatUrl;
+
+if (presenceHeartbeatUrl) {
+    let lastActivityAt = Date.now();
+    let isSendingHeartbeat = false;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    const recordActivity = () => {
+        lastActivityAt = Date.now();
+    };
+
+    const sendPresenceHeartbeat = async () => {
+        if (document.hidden || isSendingHeartbeat) return;
+
+        isSendingHeartbeat = true;
+
+        try {
+            const response = await fetch(presenceHeartbeatUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    active: Date.now() - lastActivityAt < 15 * 60 * 1000,
+                }),
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Presence heartbeat failed with status ${response.status}.`);
+            }
+        } catch (error) {
+            console.error('Unable to update messaging presence.', error);
+        } finally {
+            isSendingHeartbeat = false;
+        }
+    };
+
+    ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach((eventName) => {
+        document.addEventListener(eventName, recordActivity, { passive: true });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            recordActivity();
+            sendPresenceHeartbeat();
+        }
+    });
+
+    sendPresenceHeartbeat();
+    window.setInterval(sendPresenceHeartbeat, 60 * 1000);
+}
+
 const themeSettings = document.querySelector('[data-theme-settings]');
 const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)');
 let themePreference = 'system';
@@ -13,7 +68,6 @@ try {
 } catch (error) {
     console.error('Unable to read the saved theme preference.', error);
 }
-
 const applyTheme = () => {
     document.documentElement.dataset.theme = themePreference === 'dark'
         || (themePreference === 'system' && prefersDarkTheme.matches)
@@ -26,7 +80,7 @@ prefersDarkTheme.addEventListener('change', applyTheme);
 
 if (themeSettings) {
     const themeStatus = themeSettings.querySelector('[data-theme-status]');
-    const selectedTheme = themeSettings.querySelector(`input[name="theme"][value="${themePreference}"]`);
+    const selectedTheme = themeSettings.querySelector(`input[name="theme"][value="${document.documentElement.dataset.theme}"]`);
 
     if (selectedTheme instanceof HTMLInputElement) {
         selectedTheme.checked = true;
@@ -36,13 +90,12 @@ if (themeSettings) {
         const themeInput = event.target;
 
         if (!(themeInput instanceof HTMLInputElement) || themeInput.name !== 'theme') return;
-        if (!['system', 'light', 'dark'].includes(themeInput.value)) return;
+        if (themeInput.value !== 'light' && themeInput.value !== 'dark') return;
 
-        themePreference = themeInput.value;
-        applyTheme();
+        document.documentElement.dataset.theme = themeInput.value;
 
         try {
-            window.localStorage.setItem(themePreferenceKey, themePreference);
+            window.localStorage.setItem(themePreferenceKey, themeInput.value);
             themeStatus.textContent = '';
         } catch (error) {
             console.error('Unable to save the theme preference.', error);
@@ -100,23 +153,73 @@ if (liveThread) {
     const pagination = liveThread.querySelector('.pagination-wrap');
     const messageIds = Array.from(liveThread.querySelectorAll('[data-message-id]'))
         .map((message) => Number(message.dataset.messageId));
-    let lastMessageId = Math.max(0, ...messageIds);
+    const latestMessageId = Number(liveThread.dataset.lastMessageId);
+    let lastMessageId = Math.max(0, Number.isSafeInteger(latestMessageId) ? latestMessageId : 0, ...messageIds);
+    let lastSeenMessageId = Number(liveThread.dataset.lastSeenMessageId);
     let isCheckingForMessages = false;
     let isSendingMessage = false;
+    let pollTimeout;
 
     liveThread.scrollTop = liveThread.scrollHeight;
+
+    const createAvatar = (avatarUrl, name, className) => {
+        const avatar = document.createElement('span');
+        avatar.classList.add(className);
+        avatar.setAttribute('aria-hidden', 'true');
+
+        if (avatarUrl) {
+            const image = document.createElement('img');
+            image.src = avatarUrl;
+            image.alt = '';
+            avatar.append(image);
+        } else {
+            const initial = document.createElement('span');
+            initial.textContent = name.trim().charAt(0).toUpperCase() || '?';
+            avatar.append(initial);
+        }
+
+        return avatar;
+    };
+
+    const updateSeenMessage = (messageId) => {
+        liveThread.querySelectorAll('[data-message-seen]').forEach((receipt) => receipt.remove());
+
+        const parsedMessageId = Number(messageId);
+
+        if (!Number.isSafeInteger(parsedMessageId) || parsedMessageId < 1) return;
+
+        const bubble = liveThread.querySelector(`[data-message-id="${parsedMessageId}"]`);
+
+        if (!bubble?.classList.contains('message-own')) return;
+
+        const receipt = document.createElement('span');
+        receipt.classList.add('message-seen');
+        receipt.dataset.messageSeen = '';
+        receipt.append(createAvatar(
+            liveThread.dataset.seenAvatarUrl,
+            liveThread.dataset.seenInitial,
+            'message-seen-avatar',
+        ));
+
+        const label = document.createElement('span');
+        label.textContent = 'Seen';
+        receipt.append(label);
+        bubble.append(receipt);
+    };
 
     const addMessage = (message) => {
         const messageId = Number(message.id);
 
         if (!Number.isSafeInteger(messageId) || messageId <= lastMessageId) return false;
 
+        const isOwnMessage = Number(message.sender_id) === currentUserId;
+        const row = document.createElement('div');
+        row.classList.add('message-row');
+        if (isOwnMessage) row.classList.add('message-row-own');
+
         const bubble = document.createElement('article');
         bubble.classList.add('message-bubble');
-
-        if (Number(message.sender_id) === currentUserId) {
-            bubble.classList.add('message-own');
-        }
+        if (isOwnMessage) bubble.classList.add('message-own');
 
         bubble.dataset.messageId = String(messageId);
 
@@ -132,7 +235,12 @@ if (liveThread) {
         time.textContent = message.display_time;
 
         bubble.append(sender, body, time);
-        liveThread.insertBefore(bubble, pagination);
+        const content = document.createElement('div');
+        content.classList.add('message-content');
+        content.append(bubble);
+        const avatar = createAvatar(message.sender_avatar_url, message.sender_name, 'message-avatar');
+        row.append(...(isOwnMessage ? [content, avatar] : [avatar, content]));
+        liveThread.insertBefore(row, pagination);
         liveThread.querySelector('.empty-state')?.remove();
         lastMessageId = messageId;
 
@@ -155,7 +263,8 @@ if (liveThread) {
                 throw new Error(`Message update request failed with status ${response.status}.`);
             }
 
-            const { data } = await response.json();
+            const payload = await response.json();
+            const { data } = payload;
 
             if (!Array.isArray(data)) {
                 throw new Error('Message update response did not contain a message list.');
@@ -164,6 +273,11 @@ if (liveThread) {
             const wasAtBottom = liveThread.scrollHeight - liveThread.scrollTop - liveThread.clientHeight < 60;
             const previousScrollTop = liveThread.scrollTop;
             const addedMessages = data.reduce((added, message) => addMessage(message) || added, false);
+            lastSeenMessageId = Number.isSafeInteger(Number(payload.last_seen_message_id))
+                ? Number(payload.last_seen_message_id)
+                : 0;
+            liveThread.dataset.lastSeenMessageId = String(lastSeenMessageId);
+            updateSeenMessage(lastSeenMessageId);
 
             if (addedMessages && wasAtBottom) {
                 liveThread.scrollTop = liveThread.scrollHeight;
@@ -221,7 +335,241 @@ if (liveThread) {
     });
 
     pollForMessages();
-    window.setInterval(pollForMessages, 2000);
+    const schedulePoll = () => {
+        window.clearTimeout(pollTimeout);
+        pollTimeout = window.setTimeout(async () => {
+            await pollForMessages();
+            schedulePoll();
+        }, 2000);
+    };
+
+    schedulePoll();
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            pollForMessages();
+            schedulePoll();
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        pollForMessages();
+        schedulePoll();
+    });
+}
+
+const fetchDuration = document.querySelector('[data-fetch-duration]');
+
+if (fetchDuration) {
+    const durationInput = fetchDuration.querySelector('input[name="duration_value"]');
+    const durationUnit = fetchDuration.querySelector('select[name="duration_unit"]');
+    const durationHelp = document.querySelector('[data-fetch-duration-help]');
+    const durationBounds = {
+        minutes: { min: 5, max: 1440 },
+        hours: { min: 1, max: 24 },
+        days: { min: 1, max: 1 },
+    };
+
+    const updateDurationBounds = () => {
+        const bounds = durationBounds[durationUnit.value] ?? durationBounds.minutes;
+        const unitLabel = durationUnit.value === 'days' ? 'day' : durationUnit.value;
+
+        durationInput.min = String(bounds.min);
+        durationInput.max = String(bounds.max);
+        durationHelp.textContent = durationUnit.value === 'days'
+            ? 'Choose 1 day. Minimum request length: 5 minutes.'
+            : `Choose ${bounds.min} to ${bounds.max} ${unitLabel}. Minimum: 5 minutes. Maximum: 1 day.`;
+    };
+
+    durationUnit.addEventListener('change', updateDurationBounds);
+    updateDurationBounds();
+}
+
+const fetchFeed = document.querySelector('[data-fetch-feed]');
+
+if (fetchFeed) {
+    const requestList = fetchFeed.querySelector('[data-fetch-requests]');
+    const fetchStatus = fetchFeed.querySelector('[data-fetch-status]');
+    const updatesUrl = new URL(fetchFeed.dataset.updatesUrl, window.location.href);
+    const requestIds = new Set(
+        Array.from(requestList.querySelectorAll('[data-fetch-request-id]'))
+            .map((request) => request.dataset.fetchRequestId),
+    );
+    let lastId = fetchFeed.dataset.lastId || '0';
+    let isCheckingForRequests = false;
+    let pollTimeout;
+
+    const createTextElement = (tagName, className, text) => {
+        const element = document.createElement(tagName);
+        element.classList.add(className);
+        element.textContent = text;
+
+        return element;
+    };
+
+    const showEmptyState = () => {
+        if (requestList.querySelector('[data-fetch-request-id]') || requestList.querySelector('[data-fetch-empty]')) return;
+
+        const emptyState = document.createElement('div');
+        emptyState.classList.add('empty-state', 'fetch-empty-state');
+        emptyState.dataset.fetchEmpty = '';
+        emptyState.append(
+            createTextElement('h2', 'fetch-empty-heading', 'No live requests at the moment.'),
+            createTextElement('p', 'fetch-empty-copy', 'Check back soon or post what you need.'),
+        );
+        requestList.append(emptyState);
+    };
+
+    const removeExpiredFetchRequests = () => {
+        requestList.querySelectorAll('[data-fetch-request-id]').forEach((request) => {
+            const expiresAt = Date.parse(request.dataset.expiresAt);
+
+            if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+                requestIds.delete(request.dataset.fetchRequestId);
+                request.remove();
+            }
+        });
+
+        showEmptyState();
+    };
+
+    const addFetchRequest = (fetchRequest) => {
+        const requestId = String(fetchRequest.id);
+
+        if (requestIds.has(requestId)) return;
+
+        const article = document.createElement('article');
+        article.classList.add('listing-card', 'fetch-request-card');
+        article.dataset.fetchRequestId = requestId;
+        article.dataset.expiresAt = fetchRequest.expires_at;
+
+        const heading = document.createElement('div');
+        heading.classList.add('fetch-request-heading');
+
+        const requesterInfo = document.createElement('div');
+        const title = createTextElement('h3', 'fetch-request-title', fetchRequest.item_name);
+        const requester = createTextElement('p', 'fetch-requester', `Posted by ${fetchRequest.requester.name}`);
+        requesterInfo.append(title, requester);
+
+        const budget = fetchRequest.budget === null
+            ? 'Budget flexible'
+            : `Up to ₱${new Intl.NumberFormat('en-PH', { maximumFractionDigits: 2 }).format(Number(fetchRequest.budget))}`;
+        heading.append(requesterInfo, createTextElement('span', 'fetch-budget', budget));
+
+        const details = createTextElement('p', 'fetch-request-details', fetchRequest.details);
+        const meta = document.createElement('div');
+        meta.classList.add('fetch-request-meta');
+        const delivery = document.createElement('span');
+        delivery.append('Deliver to ', createTextElement('strong', 'fetch-delivery-location', fetchRequest.delivery_location));
+        const expiresAt = createTextElement('time', 'fetch-expiry', `Expires ${fetchRequest.expires_at_display}`);
+        expiresAt.dateTime = fetchRequest.expires_at;
+        meta.append(delivery, expiresAt);
+
+        article.append(heading, details, meta);
+        requestList.querySelector('[data-fetch-empty]')?.remove();
+        requestList.prepend(article);
+        requestIds.add(requestId);
+        lastId = requestId;
+
+        while (requestList.children.length > 30) {
+            requestList.lastElementChild.remove();
+        }
+    };
+
+    const pollForFetchRequests = async () => {
+        if (isCheckingForRequests || document.hidden) return;
+
+        removeExpiredFetchRequests();
+        isCheckingForRequests = true;
+
+        try {
+            updatesUrl.searchParams.set('after', lastId);
+            const response = await fetch(updatesUrl, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Fetch request update failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+
+            if (!Array.isArray(payload.data)) {
+                throw new Error('Fetch request update response did not contain a request list.');
+            }
+
+            payload.data.forEach(addFetchRequest);
+            if (fetchStatus) fetchStatus.textContent = 'Live updates are on.';
+        } catch (error) {
+            if (fetchStatus) fetchStatus.textContent = 'Connection interrupted. Retrying for new requests…';
+            console.error(error);
+        } finally {
+            isCheckingForRequests = false;
+        }
+    };
+
+    const scheduleFetchPoll = (delay = 15000) => {
+        window.clearTimeout(pollTimeout);
+        pollTimeout = window.setTimeout(async () => {
+            await pollForFetchRequests();
+            scheduleFetchPoll();
+        }, delay);
+    };
+
+    pollForFetchRequests();
+    scheduleFetchPoll();
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            pollForFetchRequests();
+            scheduleFetchPoll();
+        }
+    });
+    window.addEventListener('focus', () => {
+        pollForFetchRequests();
+        scheduleFetchPoll();
+    });
+}
+
+const presenceIndicators = Array.from(document.querySelectorAll('[data-presence-url]'));
+
+if (presenceIndicators.length) {
+    const validPresenceStatuses = new Set(['online', 'away', 'offline']);
+
+    const refreshPresence = async (indicator) => {
+        try {
+            const response = await fetch(indicator.dataset.presenceUrl, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Presence status request failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+            const status = payload.data?.presence_status;
+
+            if (!validPresenceStatuses.has(status)) {
+                throw new Error('Presence status response contained an invalid state.');
+            }
+
+            indicator.dataset.presenceStatus = status;
+            indicator.querySelector('[data-presence-label]').textContent =
+                status.charAt(0).toUpperCase() + status.slice(1);
+        } catch (error) {
+            console.error('Unable to refresh messaging presence.', error);
+        }
+    };
+
+    const refreshAllPresence = () => {
+        if (document.hidden) return;
+        presenceIndicators.forEach((indicator) => refreshPresence(indicator));
+    };
+
+    refreshAllPresence();
+    window.setInterval(refreshAllPresence, 30 * 1000);
+    document.addEventListener('visibilitychange', refreshAllPresence);
 }
 
 const savedFavorites = () => {
@@ -256,6 +604,16 @@ const showToast = (message) => {
 
 updateFavoriteButtons();
 
+const savedLink = document.querySelector('[data-saved-link]');
+savedLink?.addEventListener('click', (event) => {
+    event.preventDefault();
+    window.location.assign(savedLink.href);
+});
+
+const savedView = document.querySelector('[data-saved-view]');
+if (savedView) {
+}
+
 document.querySelectorAll('[data-favorite]').forEach((button) => {
     button.addEventListener('click', async () => {
         const favorites = savedFavorites();
@@ -281,12 +639,7 @@ document.querySelectorAll('[data-favorite]').forEach((button) => {
             }
 
             const payload = await response.json();
-
-            if (typeof payload.saved !== 'boolean') {
-                throw new Error('The saved listing response did not contain a saved state.');
-            }
-
-            button.setAttribute('aria-pressed', String(payload.saved));
+            button.setAttribute('aria-pressed', payload.saved ? 'true' : 'false');
             button.setAttribute('aria-label', `${payload.saved ? 'Remove' : 'Save'} ${button.getAttribute('aria-label').replace(/^(Save|Remove) /, '')}`);
         } catch (error) {
             console.error(error);
@@ -298,15 +651,9 @@ document.querySelectorAll('[data-favorite]').forEach((button) => {
         button.disabled = false;
         updateFavoriteButtons();
 
-        if (wasSaved && document.querySelector('[data-saved-view]')) {
+        if (wasSaved && savedView) {
             button.closest('.listing-card')?.remove();
-            const url = new URL(window.location.href);
-
-            if (!document.querySelector('.listing-grid .listing-card')) {
-                url.searchParams.delete('page');
-            }
-
-            window.location.assign(url);
+            window.location.reload();
             return;
         }
 

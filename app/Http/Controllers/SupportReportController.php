@@ -16,12 +16,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SupportReportController extends Controller
 {
-    public function index(Request $request): View|RedirectResponse
+    public function index(): View
     {
-        if ($request->user()) {
-            return redirect()->route('support.reports.mine');
-        }
-
         return view('support.reports.contact');
     }
 

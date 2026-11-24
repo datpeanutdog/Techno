@@ -24,11 +24,10 @@ class MarketplaceTest extends TestCase
             ->assertSee('All categories')
             ->assertSee('Search')
             ->assertSee('Engineering calculus book set')
-            ->assertSee('Listed ', false)
-            ->assertSee('data-save-url=', false)
             ->assertSee('class="listing-condition condition-good">Good</span>', false)
             ->assertSee('M6.75 3.75h10.5', false)
             ->assertSee('Laptop for classes & projects')
+            ->assertSee('Listed ', false)
             ->assertDontSee('Student lab coat')
             ->assertSee('<nav class="market-tabs" aria-label="Browse buy and rent listings">', false)
             ->assertSee('market-mode-tab tab-active', false)
@@ -63,15 +62,30 @@ class MarketplaceTest extends TestCase
                 'class="sidebar-profile-name"',
                 '>Buy</span>',
                 '>Rent</span>',
+                '>Fetch</span>',
                 '>Save for later</span>',
                 'Your account',
                 '>Manage Listing</span>',
                 'href="'.route('settings.index').'"',
                 '>Settings</span>',
+                'href="'.route('conversations.index').'"',
                 '>Messages</span>',
+                'href="'.route('support.reports.index').'"',
                 '>Support</span>',
             ], false)
             ->assertDontSee('<p class="sidebar-section-label">Marketplace</p>', false);
+    }
+
+    public function test_settings_navigation_opens_theme_settings(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('settings.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['>Manage Listing</span>', '>Settings</span>', '>Messages</span>'], false)
+            ->assertSee('name="theme"', false)
+            ->assertSee('value="light"', false)
+            ->assertSee('value="dark"', false)
+            ->assertSee('aria-current="page"', false);
     }
 
     public function test_header_listing_action_is_hidden_on_account_pages(): void
@@ -118,12 +132,12 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('Engineering calculus book set');
     }
 
-    public function test_saved_marketplace_view_shows_only_the_current_users_saved_listings(): void
+    public function test_saved_marketplace_view_shows_only_requested_available_listings(): void
     {
         $seller = User::factory()->create();
         $savedSale = $seller->listings()->create([
             'title' => 'Saved sale item',
-            'description' => 'A sale listing saved by this account.',
+            'description' => 'A sale listing saved by this browser.',
             'price' => 100,
             'type' => 'sale',
             'category' => 'Books & Notes',
@@ -133,7 +147,7 @@ class MarketplaceTest extends TestCase
         ]);
         $savedRental = $seller->listings()->create([
             'title' => 'Saved rental item',
-            'description' => 'A rental listing saved by this account.',
+            'description' => 'A rental listing saved by this browser.',
             'price' => 20,
             'type' => 'rent',
             'rent_period' => 'day',
@@ -160,7 +174,7 @@ class MarketplaceTest extends TestCase
             ->get('/?view=saved')
             ->assertOk()
             ->assertSee('<h1>Save for later</h1>', false)
-            ->assertSee('2 listings saved to your account.')
+            ->assertSee('2 listings saved on this device.')
             ->assertSee('data-saved-view', false)
             ->assertSee('data-saved-link', false)
             ->assertDontSee('Search campus listings')
@@ -172,12 +186,41 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('Unsaved marketplace item');
     }
 
+    public function test_saved_listings_are_isolated_between_accounts(): void
+    {
+        $listing = Listing::create([
+            'title' => 'Account-specific saved item',
+            'slug' => 'account-specific-saved-item',
+            'description' => 'This item belongs only in one account.',
+            'price' => 250,
+            'type' => 'sale',
+            'category' => 'Books & Notes',
+            'location' => 'Main campus',
+            'seller_name' => 'Seller',
+            'seller_initials' => 'SE',
+        ]);
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+        $firstUser->savedListings()->attach($listing);
+
+        $this->actingAs($firstUser)
+            ->get('/?view=saved')
+            ->assertOk()
+            ->assertSee('Account-specific saved item');
+
+        $this->actingAs($secondUser)
+            ->get('/?view=saved')
+            ->assertOk()
+            ->assertDontSee('Account-specific saved item')
+            ->assertSee('No saved items yet.');
+    }
+
     public function test_saved_marketplace_view_has_a_clean_empty_state(): void
     {
         $this->actingAs(User::factory()->create())
             ->get('/?view=saved')
             ->assertOk()
-            ->assertSee('0 listings saved to your account.')
+            ->assertSee('0 listings saved on this device.')
             ->assertSee('No saved items yet.')
             ->assertSee('Bookmark a listing and it will be waiting here.')
             ->assertSee('Browse campus finds')
@@ -185,52 +228,11 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('List an item');
     }
 
-    public function test_saved_listing_actions_persist_for_the_signed_in_account(): void
-    {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $listing = Listing::create([
-            'title' => 'A listing worth saving',
-            'slug' => 'a-listing-worth-saving',
-            'description' => 'A saved listing for the marketplace.',
-            'price' => 80,
-            'type' => 'sale',
-            'category' => 'School Supplies',
-            'location' => 'Main campus',
-            'seller_name' => 'Seller',
-            'seller_initials' => 'SE',
-        ]);
-
-        $this->actingAs($user)->postJson(route('saved-listings.store', $listing))
-            ->assertOk()
-            ->assertJsonPath('saved', true)
-            ->assertJsonPath('listing_id', $listing->id);
-        $this->actingAs($user)->postJson(route('saved-listings.store', $listing))->assertOk();
-        $this->assertDatabaseCount('saved_listings', 1);
-
-        $this->actingAs($user)->get('/')->assertSee('aria-pressed="true"', false);
-        $this->actingAs($user)->get('/?view=saved')->assertSee('A listing worth saving');
-        $this->actingAs($otherUser)->get('/?view=saved')->assertDontSee('A listing worth saving');
-
-        $this->actingAs($user)->deleteJson(route('saved-listings.destroy', $listing))
-            ->assertOk()
-            ->assertJsonPath('saved', false);
-        $this->assertDatabaseCount('saved_listings', 0);
-    }
-
-    public function test_settings_page_shows_theme_choices_and_account_tools(): void
+    public function test_saved_marketplace_view_rejects_malformed_favorite_ids(): void
     {
         $this->actingAs(User::factory()->create())
-            ->get(route('settings.index'))
-            ->assertOk()
-            ->assertSee('Appearance')
-            ->assertSee('name="theme"', false)
-            ->assertSee('id="theme-system" type="radio" name="theme" value="system" data-theme-option checked', false)
-            ->assertSee('value="system"', false)
-            ->assertSee('value="light"', false)
-            ->assertSee('value="dark"', false)
-            ->assertSee(route('profile.edit'), false)
-            ->assertSee(route('support.reports.create'), false);
+            ->get('/?view=saved&favorites=1%2Cinvalid')
+            ->assertSessionHasErrors('favorites');
     }
 
     public function test_listing_detail_page_is_available(): void
@@ -404,7 +406,7 @@ class MarketplaceTest extends TestCase
     {
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('PASABUY home')
+            ->assertSee('Pasabuy home')
             ->assertSee('Welcome back')
             ->assertSee('Create an account')
             ->assertDontSee('Main navigation')
@@ -418,11 +420,13 @@ class MarketplaceTest extends TestCase
             ->assertDontSee('List an item');
     }
 
-    public function test_signed_in_users_can_post_without_email_verification(): void
+    public function test_unverified_users_can_browse_and_use_listing_features(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->unverified()->create();
 
-        $this->actingAs($user)->get(route('listings.create'))->assertOk();
+        $this->actingAs($user)->get('/')->assertOk();
+        $this->actingAs($user)->get(route('listings.create'))
+            ->assertOk();
         $this->actingAs($user)->post(route('listings.store'), [
             'title' => 'My lab coat',
             'description' => 'Clean lab coat for science class.',
@@ -431,12 +435,12 @@ class MarketplaceTest extends TestCase
             'category' => 'Uniforms',
             'location' => 'Science building',
         ])->assertRedirect();
-    }
 
-    public function test_email_verification_routes_are_not_enabled(): void
-    {
-        $this->get('/email/verify')->assertNotFound();
-        $this->post('/email/verification-notification')->assertNotFound();
+        $this->assertDatabaseCount('listings', 1);
+        $this->assertDatabaseHas('listings', [
+            'title' => 'My lab coat',
+            'user_id' => $user->id,
+        ]);
     }
 
     public function test_users_cannot_edit_or_remove_other_users_listings(): void

@@ -63,7 +63,26 @@ export default function MessagesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void loadConversations();
+      let isFocused = true;
+      let isLoading = false;
+      const refreshConversations = async () => {
+        if (!isFocused || isLoading) return;
+
+        isLoading = true;
+        try {
+          await loadConversations();
+        } finally {
+          isLoading = false;
+        }
+      };
+
+      void refreshConversations();
+      const interval = setInterval(() => void refreshConversations(), 30 * 1000);
+
+      return () => {
+        isFocused = false;
+        clearInterval(interval);
+      };
     }, [loadConversations]),
   );
 
@@ -132,9 +151,27 @@ export default function MessagesScreen() {
                 )}
                 <View style={screenStyles.copy}>
                   <View style={screenStyles.topline}>
-                    <Text numberOfLines={1} style={screenStyles.name}>
-                      {conversation.other_participant.name}
-                    </Text>
+                    <View style={screenStyles.conversationIdentity}>
+                      <Text numberOfLines={1} style={screenStyles.name}>
+                        {conversation.other_participant.name}
+                      </Text>
+                      <View style={screenStyles.presenceLine}>
+                        <View
+                          style={[
+                            screenStyles.presenceDot,
+                            conversation.other_participant.presence_status === 'online'
+                              ? screenStyles.presenceOnline
+                              : conversation.other_participant.presence_status === 'away'
+                                ? screenStyles.presenceAway
+                                : screenStyles.presenceOffline,
+                          ]}
+                        />
+                        <Text style={screenStyles.presenceText}>
+                          {conversation.other_participant.presence_status.charAt(0).toUpperCase()
+                            + conversation.other_participant.presence_status.slice(1)}
+                        </Text>
+                      </View>
+                    </View>
                     <Text style={screenStyles.time}>
                       {formatMessageTime(conversation.latest_message?.created_at)}
                     </Text>
@@ -198,7 +235,14 @@ const screenStyles = StyleSheet.create({
   avatarText: { color: COLORS.navy, fontSize: 17, fontWeight: '700' },
   copy: { flex: 1, minWidth: 0 },
   topline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  name: { flex: 1, color: COLORS.navy, fontSize: 14, fontWeight: '700' },
+  conversationIdentity: { flex: 1, minWidth: 0, gap: 3 },
+  name: { color: COLORS.navy, fontSize: 14, fontWeight: '700' },
+  presenceLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  presenceDot: { width: 7, height: 7, borderRadius: 4 },
+  presenceOnline: { backgroundColor: '#25834b' },
+  presenceAway: { backgroundColor: '#c18a24' },
+  presenceOffline: { backgroundColor: '#8a8177' },
+  presenceText: { color: COLORS.muted, fontSize: 10 },
   time: { color: COLORS.muted, fontSize: 11 },
   listing: { marginTop: 3, color: COLORS.goldDark, fontSize: 12, fontWeight: '700' },
   preview: { marginTop: 3, color: COLORS.muted, fontSize: 12, lineHeight: 18 },

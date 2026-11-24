@@ -286,8 +286,8 @@ export default function App() {
         try {
           const result = await requestJson<number[]>('/saved-listings');
           if (active) setSavedIds(result.data);
-        } catch (issue) {
-          if (active) setNotice(issue instanceof Error ? issue.message : 'Saved items could not be loaded.');
+        } catch {
+          if (active) setNotice('Saved items could not be loaded.');
         }
       })();
 
@@ -510,7 +510,7 @@ export default function App() {
 
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="PASABUY home"
+          accessibilityLabel="Pasabuy home"
           onPress={() => changeTab('buy')}
           style={styles.brand}
         >
@@ -518,7 +518,7 @@ export default function App() {
             <Text style={styles.brandIconText}>✓</Text>
           </View>
           <View>
-            <Text style={styles.brandName}>pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
+            <Text style={styles.brandName}>Pasa<Text style={styles.brandNameAccent}>buy</Text></Text>
           </View>
         </Pressable>
         <View style={{ flexDirection: 'row', gap: 8 }}>

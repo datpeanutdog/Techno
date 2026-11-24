@@ -82,7 +82,7 @@ export default function ListingDetailScreen() {
       );
       setSavedIds(next);
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : 'Could not update your saved find.');
+      setError(issue instanceof Error ? issue.message : 'Could not save your favorite.');
     }
   };
 

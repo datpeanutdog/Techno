@@ -1,10 +1,9 @@
 @extends('layouts.app')
 
-@section('title', 'Contact customer support — PASABUY')
+@section('title', 'Contact customer support — Pasabuy')
 
 @section('content')
     <div class="support-shell">
-        <a class="back-link" href="{{ route('marketplace.index') }}">← Back to the marketplace</a>
         <section class="support-card">
             <p class="eyebrow">CUSTOMER SERVICE</p>
             <h1>Contact customer support</h1>
