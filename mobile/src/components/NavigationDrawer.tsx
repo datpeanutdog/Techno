@@ -7,7 +7,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -19,19 +18,7 @@ import {
   requestJson,
   UserProfile,
 } from '../lib/api';
-
-const COLORS = {
-  navy: '#4a382c',
-  navyDeep: '#33251d',
-  gold: '#dfa13b',
-  cream: '#f4ede2',
-  white: '#fffdf8',
-  ink: '#3e3027',
-  muted: '#7f7468',
-  line: '#e7ddcf',
-  paleGold: '#f5efdf',
-  paleNeutral: '#efe5d8',
-};
+import { COLORS, createThemedStyles, useAppTheme } from '../lib/theme';
 
 const MESSAGE_POLL_INTERVAL_MS = 30_000;
 
@@ -76,6 +63,7 @@ function unreadMessageCount(conversations: Conversation[]): number {
 }
 
 export function NavigationDrawerProvider({ children }: { children: ReactNode }) {
+  useAppTheme();
   const [visible, setVisible] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -182,8 +170,12 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
     setVisible(false);
   }, []);
 
-  const navigate = useCallback((path: '/account' | '/messages' | '/sell' | '/support' | '/', mode?: 'rent' | 'sale' | 'saved') => {
+  const navigate = useCallback((path: '/account' | '/messages' | '/sell' | '/support' | '/settings' | '/contact-support' | '/fetch' | '/admin' | '/', mode?: 'rent' | 'sale' | 'saved') => {
     closeDrawer();
+    if (path === '/admin') {
+      router.push('/admin/index');
+      return;
+    }
     if (path === '/' && mode) {
       router.replace(mode === 'saved'
         ? { pathname: '/', params: { view: 'saved' } }
@@ -273,6 +265,8 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
               <DrawerLink icon="↗" label="Browse rentals" onPress={() => navigate('/', 'rent')} />
               <DrawerLink icon="♡" label="Saved finds" onPress={() => navigate('/', 'saved')} />
               <DrawerLink icon="＋" label="List an item" onPress={() => navigate('/sell')} />
+              <DrawerLink icon="⌖" label="Fetch request board" onPress={() => navigate('/fetch')} />
+              <DrawerLink icon="⚙" label="Settings" onPress={() => navigate('/settings')} />
               <DrawerLink
                 badge={unreadCount}
                 icon="✉"
@@ -281,9 +275,13 @@ export function NavigationDrawerProvider({ children }: { children: ReactNode }) 
               />
               <DrawerLink
                 icon="?"
-                label="Customer support"
+                label="Report an account"
                 onPress={() => navigate('/support')}
               />
+              <DrawerLink icon="✉" label="Contact support" onPress={() => navigate('/contact-support')} />
+              {profile?.role === 'admin' ? (
+                <DrawerLink icon="⚙" label="Admin tools" onPress={() => navigate('/admin')} />
+              ) : null}
 
               {error ? <Text style={drawerStyles.error}>{error}</Text> : null}
             </ScrollView>
@@ -345,7 +343,7 @@ function DrawerLink({
   );
 }
 
-const drawerStyles = StyleSheet.create({
+const drawerStyles = createThemedStyles({
   modal: { flex: 1, flexDirection: 'row', backgroundColor: '#33251d80' },
   backdrop: { flex: 1 },
   panel: {

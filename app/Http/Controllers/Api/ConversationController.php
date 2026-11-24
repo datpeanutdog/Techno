@@ -7,7 +7,6 @@ use App\Models\Conversation;
 use App\Models\Listing;
 use App\Models\Message;
 use App\Models\User;
-use App\Notifications\NewConversationNotification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -97,10 +96,6 @@ class ConversationController extends Controller
 
             return $conversation;
         });
-
-        if ($conversation->wasRecentlyCreated) {
-            $conversation->seller->notify(new NewConversationNotification($conversation->id));
-        }
 
         $this->loadConversationPayloadRelations($conversation, $user);
 

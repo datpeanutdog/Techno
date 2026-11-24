@@ -27,6 +27,7 @@ import {
   UserProfile,
 } from '../src/lib/api';
 import { MenuButton } from '../src/components/NavigationDrawer';
+import { useAppTheme } from '../src/lib/theme';
 
 type AccountMode = 'login' | 'register' | 'forgot';
 
@@ -35,6 +36,7 @@ function getExternalAvatarUrl(avatarUrl: string | null): string {
 }
 
 export default function AccountScreen() {
+  const { mode: themeMode } = useAppTheme();
   const {
     returnTo,
     listingSlug,
@@ -84,6 +86,10 @@ export default function AccountScreen() {
     }
     if (returnTo === 'messages') {
       router.replace('/messages');
+      return true;
+    }
+    if (returnTo === 'fetch') {
+      router.replace('/fetch');
       return true;
     }
     if (returnTo === 'message' && typeof listingSlug === 'string') {
@@ -307,7 +313,7 @@ export default function AccountScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-        <StatusBar style="dark" />
+        <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
         <View style={styles.header}>
           {user ? (
             <>
@@ -335,6 +341,11 @@ export default function AccountScreen() {
           <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} keyboardShouldPersistTaps="handled">
             {error ? <Text style={styles.formError}>{error}</Text> : null}
             {message ? <Text style={styles.formSubheading}>{message}</Text> : null}
+            {!user ? (
+              <Pressable onPress={() => router.push('/contact-support')} style={{ alignSelf: 'center', marginBottom: 8 }}>
+                <Text style={{ color: COLORS.goldDark }}>Contact customer support without logging in</Text>
+              </Pressable>
+            ) : null}
             {user ? (
               <>
                 <View style={styles.formCard}>
@@ -428,6 +439,11 @@ export default function AccountScreen() {
                   {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>{mode === 'register' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Log in'}</Text>}
                 </Pressable>
                 <View style={{ alignItems: 'center', gap: 12, marginTop: 18 }}>
+                  {mode === 'login' && /suspend/i.test(error) ? (
+                    <Pressable onPress={() => router.push('/suspension')}>
+                      <Text style={{ color: COLORS.goldDark }}>Review suspension or submit an appeal</Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable onPress={() => { setError(''); setMode(mode === 'register' ? 'login' : 'register'); }}>
                     <Text style={{ color: COLORS.goldDark }}>{mode === 'register' ? 'Already have an account? Log in' : 'New here? Create an account'}</Text>
                   </Pressable>
@@ -437,9 +453,14 @@ export default function AccountScreen() {
                     </Pressable>
                   ) : null}
                   {mode === 'forgot' ? (
-                    <Pressable onPress={() => setMode('login')}>
-                      <Text style={{ color: COLORS.muted }}>Back to log in</Text>
-                    </Pressable>
+                      <>
+                        <Pressable onPress={() => router.push({ pathname: '/reset-password', params: { email: email.current } })}>
+                          <Text style={{ color: COLORS.goldDark }}>I have a reset token</Text>
+                        </Pressable>
+                        <Pressable onPress={() => setMode('login')}>
+                          <Text style={{ color: COLORS.muted }}>Back to log in</Text>
+                        </Pressable>
+                      </>
                   ) : null}
                 </View>
               </View>

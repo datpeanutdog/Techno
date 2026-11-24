@@ -7,7 +7,6 @@ import {
   Image,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -15,6 +14,7 @@ import {
 import { COLORS, formatMobilePrice, styles } from '../../App';
 import { clearAuthToken, getAuthToken, Listing, requestJson } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
+import { createThemedStyles, useAppTheme } from '../../src/lib/theme';
 
 type SellerReview = {
   id: number;
@@ -44,6 +44,7 @@ type SellerProfile = {
 };
 
 export default function SellerProfileScreen() {
+  const { mode } = useAppTheme();
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const [seller, setSeller] = useState<SellerProfile | null>(null);
@@ -117,7 +118,7 @@ export default function SellerProfileScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-        <StatusBar style="dark" />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backButtonText}>‹  Back</Text>
@@ -232,7 +233,7 @@ export default function SellerProfileScreen() {
                   multiline
                   onChangeText={setBody}
                   placeholder="How was your experience with this seller?"
-                  placeholderTextColor="#9699a4"
+                  placeholderTextColor={COLORS.placeholder}
                   style={sellerStyles.reviewInput}
                   textAlignVertical="top"
                   value={body}
@@ -275,7 +276,7 @@ export default function SellerProfileScreen() {
   );
 }
 
-const sellerStyles = StyleSheet.create({
+const sellerStyles = createThemedStyles({
   content: { padding: 17, paddingBottom: 36 },
   profileCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, padding: 16, borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, backgroundColor: COLORS.white },
   avatar: { width: 62, height: 62, flex: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 31, backgroundColor: COLORS.paleGold },

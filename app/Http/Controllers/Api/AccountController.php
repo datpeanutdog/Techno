@@ -55,6 +55,26 @@ class AccountController extends Controller
         ]);
     }
 
+    public function suspensionLogin(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+        $user = User::query()->where('email', $data['email'])->first();
+
+        if (! $user || ! Hash::check($data['password'], $user->password) || ! $user->isSuspended()) {
+            return response()->json([
+                'message' => 'Those login details did not match a suspended account.',
+            ], 422);
+        }
+
+        return response()->json([
+            'data' => $this->userPayload($user),
+            'token' => $user->createToken('pasabuy-suspension-appeal', ['suspension-appeal'])->plainTextToken,
+        ]);
+    }
+
     public function me(Request $request): JsonResponse
     {
         return response()->json(['data' => $this->userPayload($request->user())]);

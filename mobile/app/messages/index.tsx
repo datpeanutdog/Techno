@@ -7,7 +7,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -20,6 +19,7 @@ import {
   requestJson,
 } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
+import { createThemedStyles, useAppTheme } from '../../src/lib/theme';
 
 function formatMessageTime(value: string | undefined): string {
   if (!value) return '';
@@ -31,6 +31,7 @@ function formatMessageTime(value: string | undefined): string {
 }
 
 export default function MessagesScreen() {
+  const { mode } = useAppTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,7 +90,7 @@ export default function MessagesScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={appStyles.safeArea}>
       <View style={appStyles.app}>
-        <StatusBar style="dark" />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
         <View style={appStyles.header}>
           <Pressable onPress={() => router.back()} style={appStyles.backButton}>
             <Text style={appStyles.backButtonText}>‹  Back</Text>
@@ -208,7 +209,7 @@ export default function MessagesScreen() {
   );
 }
 
-const screenStyles = StyleSheet.create({
+const screenStyles = createThemedStyles({
   content: { flexGrow: 1, padding: 18 },
   intro: { marginBottom: 16, color: COLORS.muted, fontSize: 14, lineHeight: 21 },
   row: {

@@ -10,7 +10,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -27,6 +26,7 @@ import {
   requestJson,
 } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
+import { createThemedStyles, useAppTheme } from '../../src/lib/theme';
 
 function formatMessageDate(value: string): string {
   const date = new Date(value);
@@ -79,6 +79,7 @@ function presenceLabel(status: PresenceStatus): string {
 }
 
 export default function ConversationScreen() {
+  const { mode } = useAppTheme();
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const [conversation, setConversation] = useState<ConversationThread | null>(null);
@@ -215,7 +216,7 @@ export default function ConversationScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={appStyles.safeArea}>
       <View style={appStyles.app}>
-        <StatusBar style="dark" />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
         <View style={appStyles.header}>
           <Pressable onPress={() => router.back()} style={appStyles.backButton}>
             <Text style={appStyles.backButtonText}>‹  Back</Text>
@@ -388,7 +389,7 @@ export default function ConversationScreen() {
   );
 }
 
-const screenStyles = StyleSheet.create({
+const screenStyles = createThemedStyles({
   listingHeader: {
     flexDirection: 'row',
     alignItems: 'center',

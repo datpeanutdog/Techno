@@ -61,6 +61,17 @@ export type ChatMessage = {
   read_at: string | null;
 };
 
+export type FetchRequest = {
+  id: number | string;
+  item_name: string;
+  details: string;
+  budget: string | number | null;
+  delivery_location: string;
+  expires_at: string;
+  expires_at_display: string;
+  requester: { name: string };
+};
+
 export type ConversationThread = Conversation & {
   messages: ChatMessage[];
 };
@@ -71,6 +82,11 @@ type ApiResponse<T> = {
   categories?: string[];
   message?: string;
   errors?: Record<string, string[]>;
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+  };
 };
 
 export class ApiError extends Error {

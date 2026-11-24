@@ -9,8 +9,18 @@ import {
   isApiErrorStatus,
   requestJson,
 } from '../src/lib/api';
+import { ThemeProvider, useAppTheme } from '../src/lib/theme';
 
 export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
+  );
+}
+
+function RootLayoutContent() {
+  useAppTheme();
   const lastActivityAt = useRef(0);
   const appState = useRef(AppState.currentState);
 
@@ -79,6 +89,12 @@ export default function RootLayout() {
           <Stack.Screen name="sell" />
           <Stack.Screen name="account" />
           <Stack.Screen name="support" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="contact-support" />
+          <Stack.Screen name="fetch" />
+          <Stack.Screen name="suspension" />
+          <Stack.Screen name="reset-password" />
+          <Stack.Screen name="admin/index" />
           <Stack.Screen name="listing/[slug]" />
           <Stack.Screen name="seller/[id]" />
           <Stack.Screen name="messages/index" />

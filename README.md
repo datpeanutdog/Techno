@@ -45,7 +45,8 @@ The Expo app in `mobile/` uses the same Laravel backend. Login or registration i
 
 4. Open Expo Go and scan the QR code. By default, the app uses the computer's Expo LAN address for the Laravel API. If you need to set `EXPO_PUBLIC_API_URL` in `mobile/.env`, use your computer's actual Wi-Fi IPv4 address (for example, `http://192.168.1.39:8000/api`), not the sample `YOUR_COMPUTER_LAN_IP`. Restart Expo after changing `.env`. On Windows, allow PHP/Laravel through the firewall on private networks if the phone cannot connect.
 
-Both the web and mobile apps read and write the same listings and user accounts. The marketplace hub requires sign-in. Mobile access tokens are stored securely on-device. Registration, login, and posting do not require email verification. Users can edit or remove their own listings and customize their display name, campus, bio, and profile photo.
+Both the web and mobile apps read and write the same listings and user accounts. Mobile access tokens are stored securely on-device. Registration, login, and posting do not require email verification. Students can browse and post Fetch requests, message sellers, contact support, submit suspension appeals, and manage their own listings. Administrators can review support reports and suspension appeals and manage account roles from the mobile admin panel.
+Choose Light or Dark under the mobile app's **Settings** tab to save an appearance preference on the device.
 
 Run `php artisan storage:link` once so uploaded profile photos are publicly available. The default local mailer is `log`; password-reset links are written to `storage/logs/laravel.log` instead of sending real email. Configure a real SMTP/mail provider in `.env` before deploying. For Expo Go on a phone, use your computer's LAN address for `APP_URL` and `EXPO_PUBLIC_API_URL`.
 
@@ -58,7 +59,10 @@ Run `php artisan storage:link` once so uploaded profile photos are publicly avai
 - View public seller profiles, active listings, and student reviews. Signed-in members can give each seller one 1–5-star review and update it later; reviews are not verified purchases.
 - Post new sale or rental listings after signing in. Rental posts include an hour, day, week, or month price period.
 - View, update, and remove your own listings on either platform.
-- Save favorite finds in the current browser with the heart button.
+- Post and follow live campus Fetch requests, and exchange private messages with sellers.
+- Contact customer support without logging in, submit account reports, and manage suspension appeals.
+- Review support reports and suspension appeals or manage user roles with an administrator account.
+- Save favorite finds with the heart button.
 - Seeded example listings to explore the marketplace right away.
 
-Seller ratings and the seeded campus listings are sample content. Payments and buyer/seller messaging are not included.
+Seller ratings and the seeded campus listings are sample content. Payments are not included.

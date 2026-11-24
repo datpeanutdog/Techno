@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, styles } from '../App';
 import { clearAuthToken, getAuthToken, requestJson } from '../src/lib/api';
 import { MenuButton } from '../src/components/NavigationDrawer';
+import { useAppTheme } from '../src/lib/theme';
 
 const REPORT_CATEGORIES = [
   { value: 'inappropriate_content', label: 'Inappropriate content' },
@@ -43,6 +44,7 @@ const MAX_PROOF_IMAGE_BYTES = 4 * 1024 * 1024;
 const MAX_TOTAL_PROOF_BYTES = 12 * 1024 * 1024;
 
 export default function SupportScreen() {
+  const { mode } = useAppTheme();
   const { reportedUserId, reportedUserName } = useLocalSearchParams<{
     reportedUserId?: string;
     reportedUserName?: string;
@@ -190,7 +192,7 @@ export default function SupportScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-        <StatusBar style="dark" />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backButtonText}>‹  Back</Text>

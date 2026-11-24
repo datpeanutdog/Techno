@@ -9,7 +9,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -23,23 +22,11 @@ import {
   UserProfile,
 } from './src/lib/api';
 import { MenuButton } from './src/components/NavigationDrawer';
+import { COLORS, createThemedStyles, getActiveTheme, useAppTheme } from './src/lib/theme';
+
+export { COLORS } from './src/lib/theme';
 
 type Tab = 'buy' | 'rent' | 'saved';
-
-export const COLORS = {
-  navy: '#4a382c',
-  navyDeep: '#33251d',
-  gold: '#dfa13b',
-  goldDark: '#845b2b',
-  cream: '#f4ede2',
-  white: '#fffdf8',
-  ink: '#3e3027',
-  muted: '#7f7468',
-  line: '#e7ddcf',
-  green: '#496d58',
-  paleGold: '#f5efdf',
-  paleNeutral: '#efe5d8',
-};
 
 export const CATEGORY_ICONS: Record<string, string> = {
   'Books & Notes': '▤',
@@ -50,7 +37,7 @@ export const CATEGORY_ICONS: Record<string, string> = {
   'Campus Services': '✦',
 };
 
-export const CONDITION_TONES: Record<string, { backgroundColor: string; color: string }> = {
+const LIGHT_CONDITION_TONES: Record<string, { backgroundColor: string; color: string }> = {
   'Brand new': { backgroundColor: '#e6efe5', color: '#3d6244' },
   'Like new': { backgroundColor: '#f6edd6', color: '#795b1a' },
   Good: { backgroundColor: '#eee7d9', color: '#705a3d' },
@@ -60,7 +47,17 @@ export const CONDITION_TONES: Record<string, { backgroundColor: string; color: s
 const DEFAULT_CATEGORIES = Object.keys(CATEGORY_ICONS);
 
 export function getConditionTone(condition: string) {
-  return CONDITION_TONES[condition] ?? CONDITION_TONES.Good;
+  if (getActiveTheme() === 'dark') {
+    const darkConditionTones: Record<string, { backgroundColor: string; color: string }> = {
+      'Brand new': { backgroundColor: '#304536', color: '#a7d7a8' },
+      'Like new': { backgroundColor: '#4a3d27', color: '#f1cf78' },
+      Good: { backgroundColor: '#3d3328', color: '#d2bda0' },
+      Fair: { backgroundColor: '#463129', color: '#e0b19b' },
+    };
+    return darkConditionTones[condition] ?? darkConditionTones.Good;
+  }
+
+  return LIGHT_CONDITION_TONES[condition] ?? LIGHT_CONDITION_TONES.Good;
 }
 
 export function formatMobilePrice(price: string | number) {
@@ -180,6 +177,7 @@ function ListingCard({
 }
 
 export default function App() {
+  const { mode: themeMode } = useAppTheme();
   const params = useLocalSearchParams<{ mode?: string; view?: string }>();
   const routerMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
   const routerView = Array.isArray(params.view) ? params.view[0] : params.view;
@@ -506,7 +504,7 @@ export default function App() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-      <StatusBar style="dark" />
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
 
       <View style={styles.header}>
         <Pressable
@@ -627,7 +625,7 @@ export default function App() {
   );
 }
 
-export const styles = StyleSheet.create({
+export const styles = createThemedStyles({
   app: { flex: 1, backgroundColor: COLORS.cream },
   safeArea: { flex: 1, backgroundColor: COLORS.cream },
   contentArea: { flex: 1 },

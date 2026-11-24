@@ -9,9 +9,33 @@ use App\Models\SupportReport;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SupportReportController extends Controller
 {
+    public function storeContact(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'contact_name' => ['required', 'string', 'max:60'],
+            'contact_email' => ['required', 'email', 'max:255'],
+            'category' => ['required', Rule::in(array_keys(SupportReport::CONTACT_CATEGORIES))],
+            'details' => ['required', 'string', 'max:5000'],
+        ]);
+        $report = SupportReport::create([
+            'contact_name' => $data['contact_name'],
+            'contact_email' => $data['contact_email'],
+            'category' => $data['category'],
+            'details' => $data['details'],
+            'proof_paths' => [],
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'data' => ['id' => $report->id, 'category' => $report->category, 'status' => $report->status],
+            'message' => 'Your message has been sent to customer support. The team can reach you at the email address you provided.',
+        ], 201);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $reports = $request->user()

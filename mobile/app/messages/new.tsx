@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -22,8 +21,10 @@ import {
   requestJson,
 } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
+import { createThemedStyles, useAppTheme } from '../../src/lib/theme';
 
 export default function NewMessageScreen() {
+  const { mode } = useAppTheme();
   const { listingSlug: rawListingSlug } = useLocalSearchParams<{ listingSlug?: string }>();
   const listingSlug = Array.isArray(rawListingSlug) ? rawListingSlug[0] : rawListingSlug;
   const [listing, setListing] = useState<Listing | null>(null);
@@ -111,7 +112,7 @@ export default function NewMessageScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={appStyles.safeArea}>
       <View style={appStyles.app}>
-        <StatusBar style="dark" />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
         <View style={appStyles.header}>
           <Pressable onPress={() => router.back()} style={appStyles.backButton}>
             <Text style={appStyles.backButtonText}>‹  Back</Text>
@@ -172,7 +173,7 @@ export default function NewMessageScreen() {
   );
 }
 
-const screenStyles = StyleSheet.create({
+const screenStyles = createThemedStyles({
   content: { flexGrow: 1, padding: 18 },
   listingCard: {
     padding: 16,

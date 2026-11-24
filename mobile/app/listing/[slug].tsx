@@ -20,8 +20,10 @@ import {
   UserProfile,
 } from '../../src/lib/api';
 import { MenuButton } from '../../src/components/NavigationDrawer';
+import { useAppTheme } from '../../src/lib/theme';
 
 export default function ListingDetailScreen() {
+  const { mode } = useAppTheme();
   const params = useLocalSearchParams<{ slug: string }>();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
   const [listing, setListing] = useState<Listing | null>(null);
@@ -89,7 +91,7 @@ export default function ListingDetailScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-      <StatusBar style="dark" />
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹  Back</Text>

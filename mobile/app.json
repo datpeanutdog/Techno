@@ -28,7 +28,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Pasabuy uses selected photos for profile pictures, listing photos, and support reports.",
+          "photosPermission": "Pasabuy uses selected photos for profile pictures, listing photos, support reports, and suspension appeals.",
           "cameraPermission": false,
           "microphonePermission": false
         }

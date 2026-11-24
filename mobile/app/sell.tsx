@@ -18,10 +18,12 @@ import {
 import { COLORS, CATEGORY_ICONS, ChoiceChip, Label, styles } from '../App';
 import { getAuthToken, Listing, ListingType, requestJson } from '../src/lib/api';
 import { MenuButton } from '../src/components/NavigationDrawer';
+import { useAppTheme } from '../src/lib/theme';
 
 const categories = Object.keys(CATEGORY_ICONS);
 
 export default function SellScreen() {
+  const { mode } = useAppTheme();
   const { editId: rawEditId } = useLocalSearchParams<{ editId?: string }>();
   const editId = typeof rawEditId === 'string' ? rawEditId : null;
   const title = useRef('');
@@ -157,7 +159,7 @@ export default function SellScreen() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.app}>
-      <StatusBar style="dark" />
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹  Back</Text>
@@ -201,7 +203,7 @@ export default function SellScreen() {
               defaultValue={listing?.title}
               onChangeText={(value) => { title.current = value; }}
               placeholder="e.g. Biology textbook, lab coat"
-              placeholderTextColor="#9699a4"
+              placeholderTextColor={COLORS.placeholder}
               style={styles.formInput}
             />
 
@@ -211,7 +213,7 @@ export default function SellScreen() {
               defaultValue={listing?.description}
               onChangeText={(value) => { description.current = value; }}
               placeholder="Condition, class, size, campus pickup details..."
-              placeholderTextColor="#9699a4"
+              placeholderTextColor={COLORS.placeholder}
               style={[styles.formInput, styles.multilineInput]}
               textAlignVertical="top"
             />
@@ -238,7 +240,7 @@ export default function SellScreen() {
                     defaultValue={listing ? String(listing.price) : undefined}
                     onChangeText={(value) => { price.current = value; }}
                     placeholder="0"
-                    placeholderTextColor="#9699a4"
+                    placeholderTextColor={COLORS.placeholder}
                     style={styles.priceField}
                   />
                 </View>
@@ -280,7 +282,7 @@ export default function SellScreen() {
               defaultValue={listing?.location}
               onChangeText={(value) => { location.current = value; }}
               placeholder="e.g. Main campus, Science building"
-              placeholderTextColor="#9699a4"
+              placeholderTextColor={COLORS.placeholder}
               style={styles.formInput}
             />
 
@@ -289,7 +291,7 @@ export default function SellScreen() {
               accessibilityRole="button"
               accessibilityLabel={image ? 'Change listing photo' : 'Choose listing photo'}
               onPress={() => void pickImage()}
-              style={{ minHeight: 150, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 8, backgroundColor: '#f8f6f0', overflow: 'hidden' }}
+              style={{ minHeight: 150, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 8, backgroundColor: COLORS.white, overflow: 'hidden' }}
             >
               {image ? (
                 <Image source={{ uri: image.uri }} style={{ width: '100%', height: 150 }} resizeMode="cover" />
@@ -320,7 +322,7 @@ export default function SellScreen() {
               keyboardType="url"
               onChangeText={(value) => { imageUrl.current = value; }}
               placeholder="https://..."
-              placeholderTextColor="#9699a4"
+              placeholderTextColor={COLORS.placeholder}
               style={styles.formInput}
             />
 

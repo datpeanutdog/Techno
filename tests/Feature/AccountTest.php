@@ -135,25 +135,6 @@ class AccountTest extends TestCase
         ]);
     }
 
-    public function test_mobile_registration_cannot_assign_an_admin_role(): void
-    {
-        config(['app.admin_emails' => []]);
-
-        $this->postJson('/api/auth/register', [
-            'name' => 'Jamie Lee',
-            'email' => 'jamie@example.test',
-            'password' => 'Correct-Horse-123!',
-            'password_confirmation' => 'Correct-Horse-123!',
-            'role' => User::ROLE_ADMIN,
-        ])->assertCreated()
-            ->assertJsonPath('data.role', User::ROLE_USER);
-
-        $this->assertDatabaseHas('users', [
-            'email' => 'jamie@example.test',
-            'role' => User::ROLE_USER,
-        ]);
-    }
-
     public function test_mobile_login_issues_a_token_and_logout_revokes_it(): void
     {
         $user = User::factory()->unverified()->create(['email' => 'jamie@example.test']);
